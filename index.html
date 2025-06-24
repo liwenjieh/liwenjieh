@@ -52,6 +52,20 @@
             transform: translateY(-3px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        .jiang-btn {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: linear-gradient(145deg, #f97316, #ea580c);
+            color: white; font-size: 1.75rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+            border: 2px solid white;
+            font-family: 'KaiTi', 'STKaiti', serif;
+        }
+        .jiang-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 12px 20px rgba(249, 115, 22, 0.3), inset 0 2px 4px rgba(255,255,255,0.2);
+        }
         .controls {
             background-color: var(--control-bg); border-radius: 1rem;
             box-shadow: 0 10px 40px -10px rgba(0,20,50,0.2); backdrop-filter: blur(12px);
@@ -104,7 +118,6 @@
             cursor: pointer; transition: all 0.2s ease-in-out; color: rgba(255,255,255,0.8);
         }
         .card-action-btn:hover { background-color: rgba(255,255,255,0.3); color: white; transform: scale(1.1); }
-        .card-action-btn i { font-size: 14px; }
         .card-action-btn.delete-itinerary-btn:hover { background-color: #ef4444; }
         .card-action-btn.recommend-btn.recommended { background-color: #16a34a; }
         
@@ -146,7 +159,6 @@
         
         .editor-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
         
-        /* --- MODIFIED: Title Style --- */
         .editor-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -224,6 +236,29 @@
             outline: none; border-color: var(--accent-color);
             box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
         }
+
+        #customArticlesModal .modal-content { max-width: 56rem; display: flex; flex-direction: column; }
+        .articles-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; }
+        #articlesModalTitle { font-size: 1.75rem; font-weight: 700; color: var(--primary-text); }
+        .articles-modal-body { padding: 1.5rem; max-height: 70vh; overflow-y: auto; }
+        .article-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 0.75rem; transition: background-color 0.2s; cursor: pointer; border: 1px solid transparent; }
+        .article-item:hover { background-color: #f9fafb; border-color: #e5e7eb; }
+        .article-title { font-size: 1.125rem; font-weight: 500; color: var(--primary-text); }
+        .article-actions .delete-article-btn { color: #9ca3af; transition: color 0.2s; }
+        .article-actions .delete-article-btn:hover { color: #ef4444; }
+        
+        /* MODIFIED: Article editor is no longer fullscreen */
+        #articleEditorModal .modal-content { 
+            max-width: 64rem; 
+            width: 95%; 
+            height: 90vh; 
+            max-height: 90vh;
+            display: flex; 
+            flex-direction: column;
+        }
+        #articleEditorModal .editor-header { padding: 1rem 1.5rem; }
+        #articleEditorModal #articleEditorTitle { font-size: 1.5rem; }
+        #articleEditorModal #articleEditorContent { font-size: 1.1rem; line-height: 1.8; padding: 1.5rem 2rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -260,6 +295,38 @@
         </div> 
     </div>
 
+    <div id="customArticlesModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="articles-modal-header">
+                <h3 id="articlesModalTitle" class="text-2xl font-bold">自定义文章</h3>
+                <div class="flex items-center gap-4">
+                     <button id="add-new-article-btn" class="control-btn !bg-green-500 !text-white !border-green-500 px-4 py-2">
+                        <i class="fas fa-plus mr-2"></i>新建文章
+                    </button>
+                    <button id="articlesModalClose" title="关闭 (Esc)" class="text-2xl text-gray-400 hover:text-gray-700 transition">&times;</button>
+                </div>
+            </div>
+            <div id="articles-list" class="articles-modal-body space-y-2">
+            </div>
+        </div>
+    </div>
+    
+    <div id="articleEditorModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="editor-header flex-shrink-0">
+                <input type="text" id="articleEditorTitle" class="editor-title" placeholder="请输入文章标题">
+                <div class="flex items-center gap-4">
+                    <button id="save-article-btn" class="control-btn !bg-blue-600 !text-white !border-blue-600 px-5 py-2">
+                        <i class="fas fa-save mr-2"></i>保存
+                    </button>
+                    <button id="close-article-editor-btn" class="control-btn px-5 py-2">返回</button>
+                </div>
+            </div>
+            <div id="articleEditorContent" contenteditable="true" class="prose max-w-none flex-grow overflow-y-auto"></div>
+        </div>
+    </div>
+
+
     <div id="creatorModal" class="modal-overlay">
         <div class="modal-content p-6 rounded-xl shadow-2xl w-full max-w-lg">
             <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">创建新行程</h2>
@@ -271,6 +338,22 @@
                 <button id="cancel-creation-btn" class="control-btn px-6 py-2">取消</button>
                 <button id="save-creation-btn" class="control-btn !bg-green-500 !text-white !border-green-500 px-6 py-2">
                     <i class="fas fa-check"></i> 创建
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="importChoiceModal" class="modal-overlay">
+        <div class="modal-content p-6 rounded-xl shadow-2xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">选择导入方式</h2>
+            <p class="text-gray-600 text-center mb-8">您希望如何处理导入的文件？</p>
+            <div class="flex justify-center gap-4">
+                <button id="import-cancel-btn" class="control-btn px-6 py-2">取消</button>
+                <button id="import-merge-btn" class="control-btn !bg-blue-500 !text-white !border-blue-500 px-6 py-2">
+                    <i class="fas fa-code-merge mr-2"></i>合并导入
+                </button>
+                <button id="import-overwrite-btn" class="control-btn !bg-red-500 !text-white !border-red-500 px-6 py-2">
+                    <i class="fas fa-file-import mr-2"></i>覆盖导入
                 </button>
             </div>
         </div>
@@ -305,6 +388,7 @@
     let dragStartPos = { x: 0, y: 0 }, originalDragItemPos = {x: 0, y: 0}, history = {}, mapItineraries = [];
     let animationFrameId = null, draggedItineraryId = null;
     let infoContentData = {}, currentEditingInfoKey = null, currentLightboxCanvasId = null;
+    let customArticles = [], currentEditingArticleId = null; 
     let animationStates = {}; 
     let routeBuilder = { isActive: false, canvasId: null, points: [] };
     let toastTimeout = null;
@@ -342,6 +426,25 @@
             titleInput: document.getElementById('new-itinerary-title'),
             saveBtn: document.getElementById('save-creation-btn'),
             cancelBtn: document.getElementById('cancel-creation-btn')
+        },
+        importChoiceModal: {
+            container: document.getElementById('importChoiceModal'),
+            cancelBtn: document.getElementById('import-cancel-btn'),
+            mergeBtn: document.getElementById('import-merge-btn'),
+            overwriteBtn: document.getElementById('import-overwrite-btn')
+        },
+        customArticlesModal: {
+            container: document.getElementById('customArticlesModal'),
+            list: document.getElementById('articles-list'),
+            closeBtn: document.getElementById('articlesModalClose'),
+            addBtn: document.getElementById('add-new-article-btn')
+        },
+        articleEditorModal: {
+            container: document.getElementById('articleEditorModal'),
+            title: document.getElementById('articleEditorTitle'),
+            content: document.getElementById('articleEditorContent'),
+            saveBtn: document.getElementById('save-article-btn'),
+            closeBtn: document.getElementById('close-article-editor-btn')
         },
         modal: { 
             overlay: document.getElementById('editModal'), title: document.getElementById('modalTitle'), 
@@ -434,13 +537,14 @@
     const renderApp = () => {
         saveDataToLocal();
         saveInfoContent();
+        saveCustomArticles(); 
         renderAllMapCards();
         mapItineraries.forEach(i => redrawCanvas(i.id));
         initializeAnimationStates();
         setupIntersectionObserver();
     };
 
-const renderAllMapCards = () => {
+    const renderAllMapCards = () => {
         dom.mapGridContainer.innerHTML = '';
         if (mapItineraries.length === 0) {
             renderEmptyState();
@@ -457,14 +561,11 @@ const renderAllMapCards = () => {
             const recommendTitle = itinerary.isRecommended ? '取消推荐' : '推荐';
             const recommendIcon = itinerary.isRecommended ? 'fas' : 'far';
 
-            // --- FIXED: Build the entire header HTML at once to prevent the bug ---
             const cardHeader = document.createElement('div');
             cardHeader.className = 'card-header';
             cardHeader.style.background = gradient;
             cardHeader.draggable = true;
 
-            // By building the HTML as a single string with the value attribute set,
-            // we avoid the DOM manipulation conflict.
             cardHeader.innerHTML = `
                 <input type="text" class="card-title" value="${escapeHTML(itinerary.title)}" data-id="${itinerary.id}">
                 <div class="card-actions-bar">
@@ -473,7 +574,6 @@ const renderAllMapCards = () => {
                      <a class="card-action-btn zoom-btn" data-id="${itinerary.id}" title="全屏查看与编辑"><i class="fas fa-expand-alt"></i></a>
                      <a class="card-action-btn recommend-btn ${recommendClass}" data-id="${itinerary.id}" title="${recommendTitle}"><i class="${recommendIcon} fa-thumbs-up"></i></a>
                 </div>`;
-            // --- END OF FIX ---
 
             card.innerHTML = `
                 <div class="map-container"><canvas id="${itinerary.id}" data-id="${itinerary.id}"></canvas></div>
@@ -486,7 +586,6 @@ const renderAllMapCards = () => {
 
         addCardEventListeners();
     };
-
     
     const renderEmptyState = () => {
         dom.mapGridContainer.innerHTML = `
@@ -539,7 +638,7 @@ const renderAllMapCards = () => {
                 if (line.text) {
                     let midPos = getPointOnBezier(start, cp1, cp2, end, 0.5);
                     midPos.x += (line.textOffsetX || 0); midPos.y += (line.textOffsetY || 0);
-                    const textAngle = Math.atan2(end.y - start.y, end.x - start.x);
+                    const textAngle = Math.atan2(end.y - start.y, end.x - start.y);
                     ctx.save(); ctx.translate(midPos.x, midPos.y); ctx.rotate(textAngle > Math.PI / 2 || textAngle < -Math.PI / 2 ? textAngle + Math.PI : textAngle); ctx.textAlign = 'center'; ctx.font = `600 7px ${FONT_FAMILY}`; ctx.textBaseline = 'bottom'; ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 2; ctx.strokeText(line.text, 0, -3); ctx.fillStyle = FONT_COLOR; ctx.fillText(line.text, 0, -3); ctx.restore();
                 }
             }
@@ -865,6 +964,16 @@ const renderAllMapCards = () => {
         }
     };
     
+    const saveCustomArticles = () => localStorage.setItem("xinjiang_custom_articles_v1.0", JSON.stringify(customArticles));
+    const loadCustomArticles = () => {
+        try {
+            customArticles = JSON.parse(localStorage.getItem("xinjiang_custom_articles_v1.0") || "[]");
+        } catch(e) {
+            console.error("Failed to parse custom articles, resetting.", e);
+            customArticles = [];
+        }
+    };
+
     const saveStateForUndo = (canvasId, isInitial = false) => {
         const itinerary = mapItineraries.find(i => i.id === canvasId);
         if (itinerary) {
@@ -899,7 +1008,6 @@ const renderAllMapCards = () => {
         const scaleX = rect.width / baseWidth, scaleY = rect.height / baseHeight;
         const clickRadius = 15, controlPointRadius = 10;
         
-        // FIX: Re-enabling precise text hit detection
         if (isLightbox && mode === 'moveText') {
             const FONT_FAMILY = '"Microsoft YaHei", sans-serif';
             hitCtx.font = `700 10px ${FONT_FAMILY}`;
@@ -971,7 +1079,6 @@ const renderAllMapCards = () => {
         currentLightboxCanvasId = canvasId;
         dom.lightbox.mapContainer.innerHTML = `<canvas data-id="${canvasId}"></canvas>`;
         dom.lightbox.editor.innerText = itinerary.description || '';
-        // MODIFIED: Use .value for input field
         dom.lightbox.editorTitle.value = itinerary.title;
         dom.lightbox.saveBtn.dataset.id = canvasId;
 
@@ -1011,13 +1118,61 @@ const renderAllMapCards = () => {
     };
     const hideCreatorModal = () => dom.creatorModal.container.classList.remove('show');
     
+    const showImportChoiceModal = (importedData) => {
+        dom.importChoiceModal.container.classList.add('show');
+
+        const hide = () => dom.importChoiceModal.container.classList.remove('show');
+
+        dom.importChoiceModal.cancelBtn.onclick = hide;
+
+        dom.importChoiceModal.overwriteBtn.onclick = () => {
+            hide();
+            showLoading(true);
+            setTimeout(() => {
+                mapItineraries = importedData.itineraries || [];
+                infoContentData = importedData.info || {};
+                customArticles = importedData.articles || []; 
+                history = {};
+                mapItineraries.forEach(itinerary => saveStateForUndo(itinerary.id, true));
+                initApp(true);
+                showToast("数据已成功覆盖！");
+                showLoading(false);
+            }, 100);
+        };
+
+        dom.importChoiceModal.mergeBtn.onclick = () => {
+            hide();
+            showLoading(true);
+            setTimeout(() => {
+                infoContentData = { ...infoContentData, ...(importedData.info || {}) };
+                
+                const mergedItinerariesMap = new Map(mapItineraries.map(item => [item.id, item]));
+                (importedData.itineraries || []).forEach(item => {
+                    mergedItinerariesMap.set(item.id, item);
+                });
+                mapItineraries = Array.from(mergedItinerariesMap.values());
+
+                const mergedArticlesMap = new Map(customArticles.map(item => [item.id, item]));
+                (importedData.articles || []).forEach(item => {
+                    mergedArticlesMap.set(item.id, item);
+                });
+                customArticles = Array.from(mergedArticlesMap.values());
+                
+                history = {};
+                mapItineraries.forEach(itinerary => saveStateForUndo(itinerary.id, true));
+                initApp(true);
+                showToast("数据已成功合并！");
+                showLoading(false);
+            }, 100);
+        };
+    };
+
     const addLightboxEventListeners = (canvasId) => {
         const itinerary = mapItineraries.find(i => i.id === canvasId);
         if (!itinerary) return;
         const canvasContainer = dom.lightbox.mapContainer;
         if (!canvasContainer) return;
         
-        // --- ADDED: Lightbox title editing feature ---
         const lightboxTitleInput = dom.lightbox.editorTitle;
         const saveLightboxTitle = () => {
             const newTitle = lightboxTitleInput.value.trim();
@@ -1038,7 +1193,6 @@ const renderAllMapCards = () => {
                 lightboxTitleInput.blur();
             }
         });
-        // --- END ADDED ---
 
         dom.lightbox.buttons['lb-saveBtn'].onclick = () => { saveDataToLocal(); saveInfoContent(); showToast("所有更改已保存！"); };
         dom.lightbox.buttons['lb-setRouteBtn'].onclick = () => {
@@ -1354,6 +1508,61 @@ const renderAllMapCards = () => {
         setTimeout(() => document.addEventListener('click', docClickHandler), 0);
     };
 
+    const renderArticlesList = () => {
+        const listEl = dom.customArticlesModal.list;
+        listEl.innerHTML = '';
+        if (customArticles.length === 0) {
+            listEl.innerHTML = '<p class="text-gray-500 text-center py-8">还没有任何文章，点击右上角创建第一篇吧！</p>';
+            return;
+        }
+        customArticles.forEach(article => {
+            const item = document.createElement('div');
+            item.className = 'article-item';
+            item.dataset.id = article.id;
+            item.innerHTML = `
+                <span class="article-title">${escapeHTML(article.title)}</span>
+                <div class="article-actions">
+                    <button class="delete-article-btn" title="删除文章" data-id="${article.id}"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            `;
+            listEl.appendChild(item);
+        });
+    };
+    
+    const showArticlesModal = () => {
+        renderArticlesList();
+        dom.customArticlesModal.container.classList.add('show');
+    };
+
+    const hideArticlesModal = () => dom.customArticlesModal.container.classList.remove('show');
+    
+    const showArticleEditor = (articleId) => {
+        currentEditingArticleId = articleId;
+        const article = customArticles.find(a => a.id === articleId);
+        if (article) {
+            dom.articleEditorModal.title.value = article.title;
+            dom.articleEditorModal.content.innerHTML = article.content;
+            dom.articleEditorModal.container.classList.add('show');
+        }
+    };
+
+    const hideArticleEditor = () => {
+        dom.articleEditorModal.container.classList.remove('show');
+        currentEditingArticleId = null;
+    };
+
+    const handleSaveArticle = () => {
+        if (!currentEditingArticleId) return;
+        const article = customArticles.find(a => a.id === currentEditingArticleId);
+        if (article) {
+            article.title = dom.articleEditorModal.title.value.trim() || '无标题文章';
+            article.content = dom.articleEditorModal.content.innerHTML;
+            saveCustomArticles();
+            showToast('文章已保存！');
+            renderArticlesList(); 
+        }
+    };
+
 
     // --- APP LEVEL EVENT HANDLERS & INIT ---
     const addCardEventListeners = () => {
@@ -1394,7 +1603,6 @@ const renderAllMapCards = () => {
         dom.mapGridContainer.querySelectorAll('.card-title').forEach(input => {
              input.addEventListener('mousedown', e => e.stopPropagation());
              
-             // --- MODIFIED: Added Enter key listener for saving title ---
              input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault(); 
@@ -1476,36 +1684,38 @@ const renderAllMapCards = () => {
         });
     };
 
-const addMainEventListeners = () => {
+    const addMainEventListeners = () => {
         dom.buttons.addItineraryBtn.onclick = showCreatorModal;
         dom.buttons.importBtn.onclick = () => dom.fileImporter.click();
         dom.buttons.exportBtn.onclick = () => {
-            if (mapItineraries.length === 0) return showToast("没有可导出的行程");
-            const dataStr = JSON.stringify({ itineraries: mapItineraries, info: infoContentData }, null, 2);
+            if (mapItineraries.length === 0 && customArticles.length === 0) return showToast("没有可导出的内容");
+            const dataStr = JSON.stringify({ itineraries: mapItineraries, info: infoContentData, articles: customArticles }, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob); const a = document.createElement('a');
             a.href = url; a.download = `新疆行程规划_${(new Date).toISOString().slice(0, 10)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("数据已导出！");
         };
-        dom.buttons.saveToBrowserBtn.onclick = () => { saveDataToLocal(); saveInfoContent(); showToast("所有更改已保存！", 2500); };
+        dom.buttons.saveToBrowserBtn.onclick = () => { saveDataToLocal(); saveInfoContent(); saveCustomArticles(); showToast("所有更改已保存！", 2500); };
         
         dom.fileImporter.onchange = e => {
             const file = e.target.files[0]; if (!file) return;
-            if(isAppBusy) { showToast("正在处理其他操作", 2000, true); return; }
+            if (isAppBusy) { showToast("正在处理其他操作", 2000, true); return; }
             isAppBusy = true; showLoading(true);
             const reader = new FileReader();
             reader.onload = (event) => {
-                setTimeout(() => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (Array.isArray(data.itineraries) && typeof data.info === 'object') {
-                            mapItineraries = data.itineraries; infoContentData = data.info;
-                            history = {}; mapItineraries.forEach(itinerary => saveStateForUndo(itinerary.id, true));
-                            initApp(true); showToast("数据导入成功！");
-                        } else { throw new Error("Invalid file format."); }
-                    } catch (err) { console.error("Import Error:", err); showToast("导入失败，文件格式错误。", 3000, true); }
-                    finally { isAppBusy = false; showLoading(false); }
-                }, 500);
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data && typeof data === 'object' && (data.itineraries || data.info || data.articles)) {
+                         showLoading(false); 
+                         showImportChoiceModal(data);
+                    } else { throw new Error("Invalid file format."); }
+                } catch (err) { 
+                    console.error("Import Error:", err); 
+                    showToast("导入失败，文件格式错误。", 3000, true); 
+                    showLoading(false);
+                } finally { 
+                    isAppBusy = false; 
+                }
             };
             reader.readAsText(file); e.target.value = '';
         };
@@ -1513,24 +1723,20 @@ const addMainEventListeners = () => {
         dom.lightbox.closeBtn.onclick = hideLightbox;
         dom.lightbox.saveBtn.onclick = handleSaveDescription;
         
-        // --- MODIFICATION START ---
-        // I have moved "北疆景点简介" from infoButtonsData to infoButtonsData2
-
-        const infoButtonsData = [
+        // MODIFIED: Button layout data
+        const infoButtonsData1 = [
             { key: "景区门票", color: "#ef4444", icon: "fa-ticket-alt" }, { key: "新疆交通", color: "#3b82f6", icon: "fa-plane" },
             { key: "注意事项", color: "#f97316", icon: "fa-exclamation-triangle" }, { key: "必备物品", color: "#10b981", icon: "fa-suitcase-rolling" },
             { key: "住宿推荐", color: "#8b5cf6", icon: "fa-bed" }, { key: "美食推荐", color: "#ec4899", icon: "fa-utensils" }
-            // The "北疆景点简介" item has been removed from this array.
         ];
         const infoButtonsData2 = [
-            // And added to the beginning of this array to group it with other region-specific topics.
-            { key: "北疆景点简介", color: "#14b8a6", icon: "fa-mountain" }, 
+            { key: "北疆景点简介", color: "#14b8a6", icon: "fa-mountain" },
             { key: "南疆景点简介", color: "#6366f1", icon: "fa-route" },
-            { key: "北疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }, { key: "南疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }
+            { type: 'jiang_button' },
+            { key: "北疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }, 
+            { key: "南疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }
         ];
-        // --- MODIFICATION END ---
-
-         const monthButtonsData = [
+         const infoButtonsData3 = [
              { key: "3-4月底", color: "#22c55e", icon: "fa-leaf" }, { key: "5-8月", color: "#14b8a6", icon: "fa-sun" },
              { key: "9-10月", color: "#d97706", icon: "fa-wind" }, { key: "11月-3月", color: "#0ea5e9", icon: "fa-snowflake" },
         ];
@@ -1538,26 +1744,81 @@ const addMainEventListeners = () => {
         const createInfoButtons = (data, container) => {
             const wrapper = document.createElement('div');
             wrapper.className = "flex flex-wrap items-center justify-center gap-3 md:gap-4";
-            wrapper.innerHTML = data.map(d => `<button data-info-key="${escapeHTML(d.key)}" class="info-btn" style="background-color: ${d.color};"><i class="fas ${d.icon} mr-2"></i>${escapeHTML(d.key)}</button>`).join('');
+            wrapper.innerHTML = data.map(d => {
+                if (d.type === 'jiang_button') {
+                    return `<button id="jiang-btn" class="jiang-btn" title="自定义文章">疆</button>`;
+                }
+                return `<button data-info-key="${escapeHTML(d.key)}" class="info-btn" style="background-color: ${d.color};"><i class="fas ${d.icon} mr-2"></i>${escapeHTML(d.key)}</button>`
+            }).join('');
             container.appendChild(wrapper);
         };
 
         dom.infoButtonsContainer.innerHTML = ''; 
-        createInfoButtons(infoButtonsData, dom.infoButtonsContainer);
+        createInfoButtons(infoButtonsData1, dom.infoButtonsContainer);
         const secondRow = document.createElement('div');
         secondRow.className = 'mt-3';
         createInfoButtons(infoButtonsData2, secondRow);
         dom.infoButtonsContainer.appendChild(secondRow);
         const thirdRow = document.createElement('div');
         thirdRow.className = 'mt-3';
-        createInfoButtons(monthButtonsData, thirdRow);
+        createInfoButtons(infoButtonsData3, thirdRow);
         dom.infoButtonsContainer.appendChild(thirdRow);
         
         dom.infoButtonsContainer.querySelectorAll('.info-btn').forEach(button => button.addEventListener('click', () => showInfoModal(button.dataset.infoKey)));
+        document.getElementById('jiang-btn').addEventListener('click', showArticlesModal); 
         
         dom.infoModal.closeBtn.onclick = hideInfoModal;
         dom.infoModal.saveBtn.onclick = handleSaveInfo;
         
+        dom.customArticlesModal.closeBtn.onclick = hideArticlesModal;
+        dom.customArticlesModal.addBtn.onclick = () => {
+             showModal({
+                title: "新建文章",
+                fields: [{ id: 'title', label: '文章标题', placeholder: '请输入新文章的标题' }],
+                onSave: ({ title }) => {
+                    if (!title.trim()) return showToast("标题不能为空", 2000, true);
+                    const newArticle = { id: `article-${Date.now()}`, title: title.trim(), content: '<p>在这里开始写作...</p>' };
+                    customArticles.unshift(newArticle);
+                    saveCustomArticles();
+                    renderArticlesList();
+                    showArticleEditor(newArticle.id);
+                }
+            });
+        };
+        dom.customArticlesModal.list.addEventListener('click', (e) => {
+            const articleItem = e.target.closest('.article-item');
+            const deleteBtn = e.target.closest('.delete-article-btn');
+            
+            if (deleteBtn) {
+                e.stopPropagation();
+                const articleId = deleteBtn.dataset.id;
+                const article = customArticles.find(a => a.id === articleId);
+                if (article) {
+                    showModal({
+                        title: "确认删除文章",
+                        confirmText: `确定要删除文章 “${escapeHTML(article.title)}” 吗？`,
+                        isDelete: true,
+                        onSave: () => {
+                            customArticles = customArticles.filter(a => a.id !== articleId);
+                            saveCustomArticles();
+                            renderArticlesList();
+                            showToast("文章已删除");
+                        }
+                    });
+                }
+            } else if (articleItem) {
+                showArticleEditor(articleItem.dataset.id);
+            }
+        });
+
+        dom.articleEditorModal.closeBtn.onclick = () => {
+            handleSaveArticle(); 
+            hideArticleEditor();
+        };
+        dom.articleEditorModal.saveBtn.onclick = () => {
+            handleSaveArticle();
+        };
+
         dom.creatorModal.cancelBtn.onclick = hideCreatorModal;
         dom.creatorModal.saveBtn.onclick = () => {
             if(isAppBusy) return;
@@ -1580,7 +1841,11 @@ const addMainEventListeners = () => {
     };
     
     const initApp = (isReload = false) => {
-        if (!isReload) { loadDataFromLocal(); loadInfoContent(); } 
+        if (!isReload) { 
+            loadDataFromLocal(); 
+            loadInfoContent(); 
+            loadCustomArticles(); 
+        } 
         renderApp();
     };
 
@@ -1592,17 +1857,32 @@ const addMainEventListeners = () => {
         document.addEventListener('keydown', (e) => {
             const activeEl = document.activeElement;
             const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+            
             if (e.key === 'Escape') {
                 if(dom.loadingOverlay.classList.contains('flex')) return;
-                if (dom.cityLinkTag.classList.contains('show')) hideCityLinkTag();
-                else if (dom.lightbox.container.classList.contains('show')) hideLightbox();
-                else if (dom.infoModal.container.classList.contains('show')) hideInfoModal();
-                else if (dom.creatorModal.container.classList.contains('show')) hideCreatorModal();
-                else if (dom.modal.overlay.classList.contains('show')) dom.modal.cancel.click();
+                if (dom.articleEditorModal.container.classList.contains('show')) {
+                    dom.articleEditorModal.closeBtn.click();
+                } else if (dom.customArticlesModal.container.classList.contains('show')) {
+                    hideArticlesModal();
+                } else if (dom.cityLinkTag.classList.contains('show')) {
+                    hideCityLinkTag();
+                } else if(dom.importChoiceModal.container.classList.contains('show')) {
+                    dom.importChoiceModal.cancelBtn.click();
+                } else if (dom.lightbox.container.classList.contains('show')) {
+                    hideLightbox();
+                } else if (dom.infoModal.container.classList.contains('show')) {
+                    hideInfoModal();
+                } else if (dom.creatorModal.container.classList.contains('show')) {
+                    hideCreatorModal();
+                } else if (dom.modal.overlay.classList.contains('show')) {
+                    dom.modal.cancel.click();
+                }
             }
-            if (dom.lightbox.container.classList.contains('show') && !isTyping) {
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); dom.lightbox.buttons['lb-undoBtn']?.click(); }
-                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedItem && dom.lightbox.buttons['lb-deleteBtn'] && !dom.lightbox.buttons['lb-deleteBtn'].disabled) { e.preventDefault(); dom.lightbox.buttons['lb-deleteBtn'].click(); }
+            if (!isTyping) {
+                if (dom.lightbox.container.classList.contains('show')) {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); dom.lightbox.buttons['lb-undoBtn']?.click(); }
+                    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedItem && dom.lightbox.buttons['lb-deleteBtn'] && !dom.lightbox.buttons['lb-deleteBtn'].disabled) { e.preventDefault(); dom.lightbox.buttons['lb-deleteBtn'].click(); }
+                }
             }
         });
     };
