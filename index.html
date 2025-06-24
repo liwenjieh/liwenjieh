@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新疆行程规划 (功能增强版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        :root {
+            --body-bg-start: #f4f9f4;
+            --body-bg-end: #e8f5e9;
+            --card-bg: #ffffff; 
+            --control-bg: rgba(255, 255, 255, 0.9);
+            --control-border: rgba(0, 0, 0, 0.07);
+            --control-text: #2c3e50;
+            --accent-color: #66bb6a; 
+            --accent-color-hover: #4caf50;
+            --primary-text: #1f2937;
+            --secondary-text: #6b7280;
+            --title-color: #1b5e20;
+            --font-main: "Microsoft YaHei", "Noto Sans SC", sans-serif;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-main);
+            background-color: var(--body-bg-start);
+            background-image: 
+                linear-gradient(var(--body-bg-start), var(--body-bg-end)),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.04'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            color: var(--primary-text);
+        }
+        .main-title {
+            font-family: var(--font-main);
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: 700;
+            text-align: center;
+            color: var(--title-color);
+            padding: 40px 20px;
+            letter-spacing: 0.1em;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+        }
+        .info-btn {
+            color: white; font-weight: 500; transition: all 0.2s ease-in-out;
+            border-radius: 0.75rem; display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.6rem 1.1rem; border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+        }
+        .info-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .controls {
+            background-color: var(--control-bg); border-radius: 1rem;
+            box-shadow: 0 10px 40px -10px rgba(0,20,50,0.2); backdrop-filter: blur(12px);
+            border: 1px solid var(--control-border);
+        }
+        .control-btn {
+            color: var(--control-text); background-color: #fff; border: 1px solid #dfe4ea;
+            font-weight: 500; transition: all 0.2s ease-in-out; border-radius: 0.75rem;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,20,50,0.05); cursor: pointer;
+        }
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.03); background-color: var(--accent-color-hover);
+            color: white; border-color: var(--accent-color-hover);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+        .control-btn:active:not(:disabled) { transform: translateY(-1px) scale(0.98); }
+        .control-btn.active {
+            background-color: var(--accent-color); color: white; border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(102, 187, 106, 0.5); transform: scale(1.05);
+        }
+        .control-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: 0 2px 5px rgba(0,20,50,0.05); }
+        
+        #map-grid-container {
+            display: grid; grid-template-columns: 1fr; 
+            gap: 1.5rem; max-width: 1400px; margin: 0 auto;
+        }
+        @media (min-width: 820px) { #map-grid-container { grid-template-columns: repeat(2, 1fr); } }
+        .map-card {
+            background-color: var(--card-bg); border-radius: 1.5rem;
+            box-shadow: 0 15px 40px -15px rgba(0,20,50,0.12);
+            overflow: hidden; display: flex; flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .map-card:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -15px rgba(0,20,50,0.18); }
+        .map-card.dragging { opacity: 0.5; transform: scale(0.95); box-shadow: 0 25px 50px -15px rgba(0,20,50,0.3); }
+        .map-card.drag-over { border: 2px dashed var(--accent-color); }
+        .card-header { padding: 1rem 1.5rem 0.75rem; z-index: 5; cursor: move; display: flex; flex-direction: column; align-items: center; }
+        .card-title {
+            font-family: var(--font-main); font-size: 1.75rem;
+            font-weight: 700; color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            background: transparent; border: none; text-align: center; width: 100%; padding: 0.25rem; margin-bottom: 0.75rem;
+        }
+        .card-title:focus { outline: 2px solid rgba(255,255,255,0.5); border-radius: 8px;}
+        .card-actions-bar { display: flex; justify-content: center; gap: 0.75rem; width: 100%; }
+        .card-action-btn {
+            width: 32px; height: 32px; background-color: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s ease-in-out; color: rgba(255,255,255,0.8);
+        }
+        .card-action-btn:hover { background-color: rgba(255,255,255,0.3); color: white; transform: scale(1.1); }
+        .card-action-btn i { font-size: 14px; }
+        .card-action-btn.delete-itinerary-btn:hover { background-color: #ef4444; }
+        .card-action-btn.recommend-btn.recommended { background-color: #16a34a; }
+        
+        .map-container { position: relative; width: 100%; padding-bottom: 73.68%; height: 0; background: #fcfdfd; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: default; }
+
+        .highlights-preview {
+            max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding: 0 1.5rem; background: #fafbfc; border-top: 1px solid #f0f0f0;
+        }
+        .highlights-preview.expanded { max-height: 200px; padding: 1rem 1.5rem; overflow-y: auto; }
+        .prose { font-size: 0.9rem; line-height: 1.7; color: var(--secondary-text); white-space: pre-wrap; word-break: break-word; }
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; 
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: var(--card-bg); border-radius: 1rem; box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+            opacity: 0; transform: scale(0.95); transition: opacity 0.3s ease, transform 0.3s ease; width: 100%;
+        }
+        .modal-overlay.show .modal-content { opacity: 1; transform: scale(1); }
+
+        #lightbox-content { height: 100%; padding: 0.5rem; display: flex; flex-direction: column; }
+        #lightbox-main-area { flex-grow: 1; display: flex; gap: 1rem; flex-direction: column; min-height: 0; }
+        #lightbox-map-container { position: relative; border-radius: 0.75rem; overflow: hidden; background: #fdfdfd; flex: 1; min-height: 300px; cursor: crosshair; }
+        #lightbox-map-container.move-text-mode { cursor: move; }
+        #lightbox-map-container canvas { position: absolute; width:100%; height:100%; }
+        #lightbox-editor-container { display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; max-height: 45%; background-color: #f9fafb; border-radius: 0.75rem; border: 1px solid #e5e7eb; }
+        @media (min-width: 1024px) {
+            #lightbox-content { padding: 1rem; }
+            #lightbox-main-area { flex-direction: row; gap: 1.5rem; }
+            #lightbox-map-container { flex-basis: 60%; max-height: 100%; min-height: 0; }
+            #lightbox-editor-container { flex-basis: 40%; max-height: 100%; }
+        }
+        
+        .editor-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+        
+        /* --- MODIFIED: Title Style --- */
+        .editor-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease-in-out;
+            color: var(--primary-text);
+        }
+        .editor-title:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.3);
+        }
+
+        #description-editor {
+            flex-grow: 1; padding: 1rem; overflow-y: auto; 
+            border: none; margin-top: 0; outline: none;
+            font-size: 1rem; line-height: 1.7; white-space: pre-wrap;
+        }
+        #description-editor:focus { box-shadow: none; }
+
+        .close-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2001;
+            width: 40px; height: 40px; background: rgba(0,0,0,0.05); color: #333; 
+            border-radius: 50%; font-size: 1.5rem; line-height: 40px; text-align: center;
+            cursor: pointer; transition: transform 0.3s, background 0.3s;
+        }
+        @media (min-width: 640px) { .close-btn { top: 1rem; right: 1rem; } }
+        .close-btn:hover { transform: rotate(90deg); background: var(--accent-color); color:white; }
+        
+        #infoModal .modal-content { max-width: 48rem; display:flex; flex-direction: column;}
+        .info-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; }
+        #infoModalTitle { font-size: 1.75rem; font-weight: 700; color: var(--primary-text); }
+        #infoModalClose { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #9ca3af; transition: color 0.2s; }
+        #infoModalClose:hover { color: var(--primary-text); }
+        .info-modal-body { padding: 1.5rem; max-height: 70vh; overflow-y: auto;}
+        #infoModalEditor { min-height: 350px; outline: none; line-height: 1.8; font-size: 1.1rem; }
+        .info-modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; background: #f9fafb; text-align: right; }
+        
+        #tooltip {
+            position: absolute; background-color: rgba(23, 23, 23, 0.9);
+            color: white; padding: 8px 12px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 2100;
+            font-size: 14px; line-height: 1.6; max-width: 280px;
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.2s;
+            transform: translate(-50%, -115%);
+        }
+        #tooltip.show { opacity: 1; }
+        
+        #city-link-tag {
+            position: absolute; background-color: #007BFF;
+            color: white; padding: 5px 10px; border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2101;
+            font-size: 13px; font-weight: 500;
+            pointer-events: auto; cursor: pointer; opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translate(-50%, -130%);
+        }
+        #city-link-tag.show { opacity: 1; }
+        #city-link-tag:hover { background-color: #0056b3; transform: translate(-50%, -130%) scale(1.05); }
+
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
+        .form-input, .form-textarea {
+            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db;
+            border-radius: 0.5rem; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus {
+            outline: none; border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <h1 class="main-title">新疆旅游行程规划</h1>
+    <div id="info-buttons-container" class="max-w-7xl mx-auto mb-8 px-4"></div>
+    <div id="controls" class="controls p-2 md:p-4 mb-8 flex flex-wrap items-center justify-center gap-2 md:gap-4 sticky top-4 z-50"></div>
+    <div id="map-grid-container"></div>
+    
+    <div id="lightbox" class="modal-overlay">
+        <div id="lightbox-content" class="modal-content w-full h-full max-w-none max-h-none rounded-none sm:rounded-2xl sm:max-w-[95%] sm:max-h-[95%]">
+            <div id="lightbox-controls-container" class="p-2 border-b border-gray-200 mb-2 flex-shrink-0"></div>
+            <div id="lightbox-main-area">
+                <div id="lightbox-map-container"></div>
+                <div id="lightbox-editor-container">
+                    <div class="editor-header">
+                         <input type="text" id="editor-title" class="editor-title" placeholder="请输入行程标题">
+                         <button id="save-description-btn" class="control-btn !bg-green-500 !text-white !border-green-500 px-3 py-1.5 text-sm">
+                            <i class="fas fa-save"></i><span class="hidden sm:inline ml-2">保存</span>
+                         </button>
+                    </div>
+                    <div id="description-editor" contenteditable="true"></div>
+                </div>
+            </div>
+        </div>
+        <div class="close-btn" title="关闭 (Esc)">&times;</div>
+    </div>
+
+    <div id="infoModal" class="modal-overlay"> 
+        <div class="modal-content info-modal-content"> 
+            <div class="info-modal-header"> <h3 id="infoModalTitle"></h3> <button id="infoModalClose" title="关闭 (Esc)"><i class="fas fa-times"></i></button> </div> 
+            <div class="info-modal-body"> <div id="infoModalEditor" contenteditable="true" class="prose max-w-none"></div> </div> 
+            <div class="info-modal-footer"> <button id="infoModalSave" class="control-btn !text-white !bg-green-600 !border-green-600 px-6 py-2 text-base"> <i class="fas fa-check mr-2"></i>保存内容 </button> </div> 
+        </div> 
+    </div>
+
+    <div id="creatorModal" class="modal-overlay">
+        <div class="modal-content p-6 rounded-xl shadow-2xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">创建新行程</h2>
+            <div>
+                <label for="new-itinerary-title" class="form-label">行程标题</label>
+                <input type="text" id="new-itinerary-title" class="form-input text-lg" placeholder="例如：南疆人文之旅">
+            </div>
+            <div class="mt-8 flex justify-end gap-4">
+                <button id="cancel-creation-btn" class="control-btn px-6 py-2">取消</button>
+                <button id="save-creation-btn" class="control-btn !bg-green-500 !text-white !border-green-500 px-6 py-2">
+                    <i class="fas fa-check"></i> 创建
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal-overlay"> 
+        <div class="modal-content p-0 rounded-xl shadow-2xl w-full max-w-md overflow-hidden"> 
+            <div class="flex justify-between items-center p-5 bg-gray-50 border-b border-gray-200"> 
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800"></h3> 
+                <div id="modal-buttons" class="flex gap-2"> 
+                    <button id="modalCancel" class="control-btn !text-gray-700 !bg-gray-200 !border-gray-300 px-4 py-2 text-sm">取消</button> 
+                    <button id="modalSave" class="control-btn !text-white !bg-blue-600 !border-blue-600 px-4 py-2 text-sm">确认</button> 
+                </div> 
+            </div> 
+            <div class="p-6 space-y-4"> 
+                 <div id="modal-fields-container"></div>
+                 <div id="modal-confirm" class="hidden"><p id="modal-confirm-text" class="text-gray-700"></p></div> 
+            </div> 
+        </div> 
+    </div>
+    
+    <input type="file" id="file-importer" class="hidden" accept=".json">
+    <div id="tooltip"></div>
+    <div id="city-link-tag"></div>
+    <div id="toast-notification" class="fixed z-[2002] bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ease-out opacity-0 transform -translate-y-10 pointer-events-none"></div>
+    <div id="loading-overlay" class="modal-overlay !bg-white/70 hidden"><div class="text-2xl font-bold text-gray-700 flex items-center gap-4"><i class="fas fa-spinner fa-spin text-4xl"></i><span>处理中...</span></div></div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // --- STATE MANAGEMENT ---
+    let mode = 'none', selectedItem = null, selectedStartCity = null, isDragging = false, itemToMoveText = null;
+    let dragStartPos = { x: 0, y: 0 }, originalDragItemPos = {x: 0, y: 0}, history = {}, mapItineraries = [];
+    let animationFrameId = null, draggedItineraryId = null;
+    let infoContentData = {}, currentEditingInfoKey = null, currentLightboxCanvasId = null;
+    let animationStates = {}; 
+    let routeBuilder = { isActive: false, canvasId: null, points: [] };
+    let toastTimeout = null;
+    let lightboxEventHandlers = {};
+    let isAppBusy = false;
+    let observer;
+    let cityLinkClickHandler = null;
+    let docClickHandler = null;
+    const hitCanvas = document.createElement('canvas');
+    const hitCtx = hitCanvas.getContext('2d');
+
+    // --- DOM Elements Cache ---
+    const dom = {
+        controlsContainer: document.getElementById('controls'),
+        mapGridContainer: document.getElementById('map-grid-container'),
+        tooltip: document.getElementById('tooltip'),
+        cityLinkTag: document.getElementById('city-link-tag'),
+        toast: document.getElementById('toast-notification'),
+        fileImporter: document.getElementById('file-importer'),
+        infoButtonsContainer: document.getElementById('info-buttons-container'),
+        loadingOverlay: document.getElementById('loading-overlay'),
+        lightbox: {
+            container: document.getElementById('lightbox'),
+            controlsContainer: document.getElementById('lightbox-controls-container'),
+            mapContainer: document.getElementById('lightbox-map-container'),
+            editor: document.getElementById('description-editor'),
+            editorTitle: document.getElementById('editor-title'),
+            saveBtn: document.getElementById('save-description-btn'),
+            closeBtn: document.querySelector('#lightbox .close-btn'),
+            buttons: {}
+        },
+        infoModal: { container: document.getElementById('infoModal'), title: document.getElementById('infoModalTitle'), editor: document.getElementById('infoModalEditor'), saveBtn: document.getElementById('infoModalSave'), closeBtn: document.getElementById('infoModalClose') },
+        creatorModal: {
+            container: document.getElementById('creatorModal'),
+            titleInput: document.getElementById('new-itinerary-title'),
+            saveBtn: document.getElementById('save-creation-btn'),
+            cancelBtn: document.getElementById('cancel-creation-btn')
+        },
+        modal: { 
+            overlay: document.getElementById('editModal'), title: document.getElementById('modalTitle'), 
+            fieldsContainer: document.getElementById('modal-fields-container'),
+            save: document.getElementById('modalSave'), cancel: document.getElementById('modalCancel'), 
+            confirm: document.getElementById('modal-confirm'), confirmText: document.getElementById('modal-confirm-text') 
+        },
+        buttons: {},
+    };
+    
+    // --- UTILITY FUNCTIONS ---
+    const escapeHTML = str => {
+        if (!str) return "";
+        const p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+    };
+
+    const cardGradients = [
+        'linear-gradient(135deg, #86CBCD 0%, #A8DFE0 100%)', 'linear-gradient(135deg, #F9E2AE 0%, #FBC78D 100%)',
+        'linear-gradient(135deg, #A6D676 0%, #c4e4a6 100%)', 'linear-gradient(135deg, #f7baba 0%, #f39797 100%)',
+        'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+    ];
+
+    const getInitialData = () => JSON.parse(JSON.stringify([
+        { 
+            id: 'map1', title: '北疆经典环线', isRecommended: true,
+            description: "这是一个经典的北疆大环线，囊括了草原、雪山、湖泊等多种地貌。",
+            data: { cities: [ {id:1, name: '喀纳斯', x: 400, y: 150, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:2, name: '禾木', x: 700, y: 150, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:3, name: '贾登峪', x: 450, y: 250, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:4, name: '布尔津', x: 450, y: 450, details: "五彩滩所在地", link: '', textOffsetX: 0, textOffsetY: 0}, {id:5, name: '乌尔禾', x: 300, y: 550, details: '魔鬼城', link: 'https://www.example.com', textOffsetX: 0, textOffsetY: 0}, {id:6, name: '奎屯', x: 600, y: 700, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:7, 'name': '阿勒泰', x: 750, y: 380, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:8, name: '乌鲁木齐', x: 800, y: 750, details: '', link: '', textOffsetX: 0, textOffsetY: 0} ], lines: [ {id:101, from: 1, to: 3, text: '87km', textOffsetX: 0, textOffsetY: 0}, {id:102, from: 3, to: 2, text: '35km', textOffsetX: 0, textOffsetY: 0}, {id:103, from: 3, to: 4, text: '123km', textOffsetX: 0, textOffsetY: 0}, {id:104, from: 4, to: 7, text: '92km', textOffsetX: 0, textOffsetY: 0}, {id:105, from: 4, to: 5, text: '214km', details: "途经克拉玛依", textOffsetX: 0, textOffsetY: 0}, {id:106, from: 7, to: 8, text: 'S21 422km', textOffsetX: 0, textOffsetY: 0}, {id:107, from: 5, to: 6, text: '105km', textOffsetX: 0, textOffsetY: 0}, {id:108, from: 6, to: 8, text: '247km', textOffsetX: 0, textOffsetY: 0} ], routes: [[8, 6, 5, 4, 3, 2]] }
+        },
+        { 
+            id: 'map2', title: '伊犁深度漫游', isRecommended: false,
+            description: "赛里木湖的最后一滴眼泪，蓝得心醉；琼库什台的人体草原，光影绝佳。",
+            data: { cities: [ {id:201, name: '赛里木湖', x: 250, y: 200, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:202, name: '果子沟', x: 280, y: 350, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:204, name: '伊宁', x: 450, y: 400, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:205, name: '昭苏', x: 450, y: 580, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:206, name: '夏塔', x: 350, y: 680, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:207, name: '特克斯', x: 600, y: 550, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:208, name: '琼库什台', x: 700, y: 680, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:209, name: '那拉提', x: 750, y: 400, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:210, name: '新源', x: 650, y: 320, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:213, name: '乔尔玛', x: 750, y: 150, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:214, name: '乌鲁木齐', x: 950, y: 100, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:215, name: '精河', x: 480, y: 180, details: '', link: '', textOffsetX: 0, textOffsetY: 0}, {id:216, name: '独山子', x: 650, y: 120, details: '', link: '', textOffsetX: 0, textOffsetY: 0} ], lines: [ {id:251, from: 201, to: 215, text: '306km', textOffsetX: 0, textOffsetY: 0}, {id:252, from: 215, to: 216, text: '247km', textOffsetX: 0, textOffsetY: 0}, {id:253, from: 216, to: 214, textOffsetX: 0, textOffsetY: 0}, {id:254, from: 201, to: 202, text: '82km', textOffsetX: 0, textOffsetY: 0}, {id:255, from: 202, to: 204, textOffsetX: 0, textOffsetY: 0}, {id:256, from: 204, to: 205, text: '180km', textOffsetX: 0, textOffsetY: 0}, {id:257, from: 205, to: 206, text: '76km', textOffsetX: 0, textOffsetY: 0}, {id:258, from: 204, to: 207, text: '160km', textOffsetX: 0, textOffsetY: 0}, {id:259, from: 207, to: 208, text: '91km', textOffsetX: 0, textOffsetY: 0}, {id:260, from: 207, to: 209, text: '62km', textOffsetX: 0, textOffsetY: 0}, {id:261, from: 209, to: 210, text: '71km', textOffsetX: 0, textOffsetY: 0}, {id:262, from: 210, to: 213, textOffsetX: 0, textOffsetY: 0} ], routes: [[214, 216, 215, 201, 204, 207, 209, 210, 213]] }
+        },
+    ]));
+
+    // --- CONTROL CREATION ---
+    const createMainControls = () => {
+        const controlsData = [
+            { id: 'addItineraryBtn', text: '创建新行程', icon: 'fa-plus' },
+            { type: 'divider' },
+            { id: 'saveToBrowserBtn', text: '保存到浏览器', icon: 'fa-save', specialClass: '!bg-green-500 !text-white' },
+            { id: 'importBtn', text: '导入文件', icon: 'fa-upload' },
+            { id: 'exportBtn', text: '导出文件', icon: 'fa-download' },
+        ];
+
+        let buttonsHtml = controlsData.map(d => {
+            if(d.type === 'divider') return `<div class="w-px h-6 bg-gray-300 mx-1"></div>`;
+            return `<button id="${d.id}" class="control-btn px-3 py-2 md:px-4 ${d.specialClass || ''}" ${d.disabled ? 'disabled' : ''} title="${d.text}"><i class="fas ${d.icon}"></i><span class="hidden sm:inline">${d.text}</span></button>`
+        }).join('');
+        dom.controlsContainer.innerHTML = buttonsHtml;
+        controlsData.filter(d => d.id).forEach(d => { dom.buttons[d.id] = document.getElementById(d.id); });
+    };
+
+    const createLightboxControls = () => {
+        const mainControlsData = [
+            { id: 'lb-saveBtn', text: '保存', icon: 'fa-save', specialClass: '!bg-green-500 !text-white' },
+            { type: 'divider' },
+            { id: 'lb-setRouteBtn', text: '设置路线', icon: 'fa-route' },
+            { id: 'lb-editModeBtn', text: '编辑/移动', icon: 'fa-arrows-up-down-left-right' },
+            { id: 'lb-addCityBtn', text: '添加城市', icon: 'fa-map-marker-alt' },
+            { id: 'lb-drawLineBtn', text: '连接城市', icon: 'fa-road' },
+            { id: 'lb-moveTextBtn', text: '移动文本', icon: 'fa-font'},
+            { id: 'lb-deleteBtn', text: '删除所选', icon: 'fa-trash-can', disabled: true },
+            { id: 'lb-undoBtn', text: '撤销', icon: 'fa-undo', disabled: true },
+        ];
+        
+        let mainButtonsHtml = mainControlsData.map(d => {
+            if (d.type === 'divider') return `<div class="w-px h-6 bg-gray-300 mx-1"></div>`;
+            return `<button id="${d.id}" class="control-btn px-3 py-2 text-xs sm:text-sm ${d.specialClass || ''}" ${d.disabled ? 'disabled' : ''} title="${d.text}"><i class="fas ${d.icon} w-4 text-center"></i><span class="hidden md:inline ml-2">${d.text}</span></button>`
+        }).join('');
+        
+        const otherControlsHtml = `
+            <input type="color" id="lb-lineColor" value="#76c893" class="w-10 h-10 p-1 border-2 border-gray-200 rounded-full cursor-pointer bg-white" title="选择线路颜色">
+            <button id="lb-straightenLineBtn" class="control-btn hidden !p-2.5" title="一键拉直"><i class="fas fa-ruler-horizontal"></i></button>
+            <div id="lb-mode-indicator" class="text-gray-700 font-semibold p-2 bg-green-100 rounded-lg hidden opacity-0 transition-opacity duration-300"></div>`;
+        
+        dom.lightbox.controlsContainer.innerHTML = `<div class="flex flex-wrap items-center justify-center gap-2">${mainButtonsHtml}${otherControlsHtml}</div>`;
+        
+        dom.lightbox.buttons = {};
+        mainControlsData.forEach(d => { if(d.id) dom.lightbox.buttons[d.id] = document.getElementById(d.id); });
+        
+        dom.lightbox.buttons['lb-straightenLineBtn'] = document.getElementById('lb-straightenLineBtn');
+        dom.lightbox.lineColorInput = document.getElementById('lb-lineColor');
+        dom.lightbox.modeIndicator = document.getElementById('lb-mode-indicator');
+    };
+    
+    // --- RENDER & DATA FUNCTIONS ---
+    const renderApp = () => {
+        saveDataToLocal();
+        saveInfoContent();
+        renderAllMapCards();
+        mapItineraries.forEach(i => redrawCanvas(i.id));
+        initializeAnimationStates();
+        setupIntersectionObserver();
+    };
+
+const renderAllMapCards = () => {
+        dom.mapGridContainer.innerHTML = '';
+        if (mapItineraries.length === 0) {
+            renderEmptyState();
+            return;
+        }
+
+        mapItineraries.forEach((itinerary, index) => {
+            const card = document.createElement('div');
+            card.className = 'map-card';
+            card.dataset.id = itinerary.id;
+            
+            const gradient = cardGradients[index % cardGradients.length];
+            const recommendClass = itinerary.isRecommended ? 'recommended' : '';
+            const recommendTitle = itinerary.isRecommended ? '取消推荐' : '推荐';
+            const recommendIcon = itinerary.isRecommended ? 'fas' : 'far';
+
+            // --- FIXED: Build the entire header HTML at once to prevent the bug ---
+            const cardHeader = document.createElement('div');
+            cardHeader.className = 'card-header';
+            cardHeader.style.background = gradient;
+            cardHeader.draggable = true;
+
+            // By building the HTML as a single string with the value attribute set,
+            // we avoid the DOM manipulation conflict.
+            cardHeader.innerHTML = `
+                <input type="text" class="card-title" value="${escapeHTML(itinerary.title)}" data-id="${itinerary.id}">
+                <div class="card-actions-bar">
+                     <a class="card-action-btn delete-itinerary-btn" data-id="${itinerary.id}" title="删除行程"><i class="fas fa-trash-alt"></i></a>
+                     <a class="card-action-btn highlights-toggle" data-id="${itinerary.id}" title="查看行程亮点"><i class="fas fa-info"></i></a>
+                     <a class="card-action-btn zoom-btn" data-id="${itinerary.id}" title="全屏查看与编辑"><i class="fas fa-expand-alt"></i></a>
+                     <a class="card-action-btn recommend-btn ${recommendClass}" data-id="${itinerary.id}" title="${recommendTitle}"><i class="${recommendIcon} fa-thumbs-up"></i></a>
+                </div>`;
+            // --- END OF FIX ---
+
+            card.innerHTML = `
+                <div class="map-container"><canvas id="${itinerary.id}" data-id="${itinerary.id}"></canvas></div>
+                <div class="highlights-preview" data-id="${itinerary.id}">
+                    <div class="prose">${itinerary.description ? escapeHTML(itinerary.description).replace(/\n/g, '<br>') : '暂无行程亮点，快去添加吧！'}</div>
+                </div>`;
+            card.prepend(cardHeader);
+            dom.mapGridContainer.appendChild(card);
+        });
+
+        addCardEventListeners();
+    };
+
+    
+    const renderEmptyState = () => {
+        dom.mapGridContainer.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center text-center p-12 bg-white rounded-2xl shadow-sm">
+                <i class="fas fa-map-marked-alt text-6xl text-gray-300 mb-6"></i>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">这里空空如也</h2>
+                <p class="text-gray-500 mb-8">开始创建你的第一个行程规划吧！</p>
+                <button id="empty-state-create-btn" class="control-btn !bg-green-500 !text-white !border-green-500 px-8 py-3 text-lg">
+                    <i class="fas fa-plus mr-2"></i>创建第一个行程
+                </button>
+            </div>`;
+        document.getElementById('empty-state-create-btn').addEventListener('click', showCreatorModal);
+    };
+
+    const drawMap = (canvasId, targetCanvas = null) => {
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (!itinerary) return;
+        const canvas = targetCanvas || document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const data = itinerary.data;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+
+        if (rect.width === 0 || rect.height === 0) return;
+
+        canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        const baseWidth = 1140, baseHeight = 840, scaleX = rect.width / baseWidth, scaleY = rect.height / baseHeight;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const findCityById = (id) => data.cities.find(c => c.id === id);
+        
+        const FONT_FAMILY = '"Microsoft YaHei", sans-serif', FONT_COLOR = '#000000';
+
+        data.lines.forEach(line => {
+            const fromCity = findCityById(line.from); const toCity = findCityById(line.to);
+            if (fromCity && toCity) {
+                const start = { x: fromCity.x * scaleX, y: fromCity.y * scaleY };
+                const end = { x: toCity.x * scaleX, y: toCity.y * scaleY };
+                if (!line.cp1 || !line.cp2) { const dx = toCity.x - fromCity.x, dy = toCity.y - fromCity.y; line.cp1 = { x: fromCity.x + dx / 3, y: fromCity.y + dy / 3 }; line.cp2 = { x: fromCity.x + dx * 2 / 3, y: fromCity.y + dy * 2 / 3 }; }
+                const cp1 = { x: line.cp1.x * scaleX, y: line.cp1.y * scaleY };
+                const cp2 = { x: line.cp2.x * scaleX, y: line.cp2.y * scaleY };
+                ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y); ctx.lineWidth = 1; ctx.strokeStyle = line.color || '#adb5bd'; ctx.stroke();
+                
+                if (mode === 'edit' && selectedItem?.type === 'line' && selectedItem.item.id === line.id && currentLightboxCanvasId === canvasId) {
+                    ctx.save(); ctx.beginPath(); ctx.setLineDash([3, 4]); ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1; ctx.moveTo(start.x, start.y); ctx.lineTo(cp1.x, cp1.y); ctx.moveTo(end.x, end.y); ctx.lineTo(cp2.x, cp2.y); ctx.stroke(); ctx.restore();
+                    [cp1, cp2].forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI); ctx.fillStyle = '#f97316'; ctx.fill(); ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke(); });
+                }
+                if (line.text) {
+                    let midPos = getPointOnBezier(start, cp1, cp2, end, 0.5);
+                    midPos.x += (line.textOffsetX || 0); midPos.y += (line.textOffsetY || 0);
+                    const textAngle = Math.atan2(end.y - start.y, end.x - start.x);
+                    ctx.save(); ctx.translate(midPos.x, midPos.y); ctx.rotate(textAngle > Math.PI / 2 || textAngle < -Math.PI / 2 ? textAngle + Math.PI : textAngle); ctx.textAlign = 'center'; ctx.font = `600 7px ${FONT_FAMILY}`; ctx.textBaseline = 'bottom'; ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 2; ctx.strokeText(line.text, 0, -3); ctx.fillStyle = FONT_COLOR; ctx.fillText(line.text, 0, -3); ctx.restore();
+                }
+            }
+        });
+        
+        const car = animationStates[canvasId]?.[0];
+        if (car && car.isActive && car.path?.length >= 2) {
+            const fromCityId = car.path[car.currentStep], toCityId = car.path[car.currentStep + 1];
+            const fromCity = findCityById(fromCityId), toCity = findCityById(toCityId);
+            const line = data.lines.find(l => (l.from === fromCityId && l.to === toCityId) || (l.from === toCityId && l.to === fromCityId));
+            if (fromCity && toCity && line) {
+                const isReversed = line.from !== fromCityId;
+                const p0 = { x: fromCity.x * scaleX, y: fromCity.y * scaleY }, p3 = { x: toCity.x * scaleX, y: toCity.y * scaleY };
+                if (!line.cp1 || !line.cp2) { const dx = toCity.x - fromCity.x, dy = toCity.y - fromCity.y; line.cp1 = { x: fromCity.x + dx / 3, y: fromCity.y + dy / 3 }; line.cp2 = { x: fromCity.x + dx * 2 / 3, y: fromCity.y + dy * 2 / 3 }; }
+                const p1 = { x: (isReversed ? line.cp2 : line.cp1).x * scaleX, y: (isReversed ? line.cp2 : line.cp1).y * scaleY }, p2 = { x: (isReversed ? line.cp1 : line.cp2).x * scaleX, y: (isReversed ? line.cp1 : line.cp2).y * scaleY };
+                const t = car.stepProgress;
+                const currentPos = getPointOnBezier(p0, p1, p2, p3, t);
+                const nextPos = getPointOnBezier(p0, p1, p2, p3, Math.min(t + 0.01, 1));
+                const angle = Math.atan2(nextPos.y - currentPos.y, nextPos.x - currentPos.x);
+                ctx.save(); ctx.translate(currentPos.x, currentPos.y);
+                if (Math.abs(angle) < Math.PI / 2) { ctx.rotate(angle); ctx.scale(-1, 1); } else { ctx.rotate(angle - Math.PI); }
+                ctx.font = `22px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🚗', 0, 0); ctx.restore();
+            }
+        }
+        
+        data.cities.forEach(city => {
+            const x = city.x * scaleX, y = city.y * scaleY;
+            const isSelectedForEdit = (selectedItem?.type === 'city' && selectedItem.item.id === city.id && currentLightboxCanvasId === canvasId);
+            const isSelectedForRoute = (routeBuilder.isActive && routeBuilder.canvasId === canvasId && routeBuilder.points.includes(city.id));
+            const isSelected = isSelectedForEdit || isSelectedForRoute;
+            
+            ctx.beginPath(); ctx.arc(x, y, isSelected ? 6 : 4, 0, 2 * Math.PI); ctx.fillStyle = 'white'; ctx.fill();
+            ctx.strokeStyle = isSelected ? '#d90429' : '#333';
+            ctx.lineWidth = isSelected ? 2.5 : 1.5;
+            ctx.stroke();
+
+            if (isSelectedForRoute) {
+                ctx.fillStyle = '#d90429'; ctx.font = `700 9px ${FONT_FAMILY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                const pointIndex = routeBuilder.points.indexOf(city.id);
+                ctx.fillText(pointIndex === 0 ? '起' : `${pointIndex}`, x, y + 0.5);
+            }
+            if (city.name) {
+                const textX = x + (city.textOffsetX || 0);
+                const textY = y - 16 + (city.textOffsetY || 0);
+                ctx.fillStyle = FONT_COLOR; ctx.font = `700 10px ${FONT_FAMILY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(city.name, textX, textY);
+            }
+        });
+    };
+    
+    const redrawCanvas = (canvasId) => {
+        const mainCanvas = document.getElementById(canvasId);
+        if (mainCanvas) drawMap(canvasId, mainCanvas);
+
+        if (currentLightboxCanvasId === canvasId && dom.lightbox.container.classList.contains('show')) {
+            const lightboxCanvas = dom.lightbox.mapContainer.querySelector('canvas');
+            if (lightboxCanvas) drawMap(currentLightboxCanvasId, lightboxCanvas);
+        }
+    };
+    
+    // --- ANIMATION & PERFORMANCE ---
+    const getPointOnBezier = (p0, p1, p2, p3, t) => {
+        const mt = 1 - t;
+        const x = mt*mt*mt*p0.x + 3*mt*mt*t*p1.x + 3*mt*t*t*p2.x + t*t*t*p3.x;
+        const y = mt*mt*mt*p0.y + 3*mt*mt*t*p1.y + 3*mt*t*t*p2.y + t*t*t*p3.y;
+        return { x, y };
+    };
+    
+    const findShortestPath = (canvasId, startId, endId) => {
+        const itinerary = mapItineraries.find(i => i.id === canvasId); if (!itinerary) return null;
+        let queue = [[startId]], visited = new Set([startId]);
+        while (queue.length > 0) {
+            let path = queue.shift(), node = path[path.length - 1]; if (node === endId) return path;
+            const neighbors = [];
+            itinerary.data.lines.forEach(line => { if (line.from === node) neighbors.push(line.to); if (line.to === node) neighbors.push(line.from); });
+            for (let neighbor of new Set(neighbors)) { if (!visited.has(neighbor)) { visited.add(neighbor); let newPath = [...path]; newPath.push(neighbor); queue.push(newPath); } }
+        }
+        return null;
+    };
+    
+    const initializeAnimationStates = () => {
+        animationStates = {};
+        mapItineraries.forEach(itinerary => {
+            const highLevelRoute = itinerary.data.routes?.[0];
+            if (!highLevelRoute || highLevelRoute.length < 2) return;
+            
+            let detailedPath = [];
+            for (let i = 0; i < highLevelRoute.length - 1; i++) {
+                const leg = findShortestPath(itinerary.id, highLevelRoute[i], highLevelRoute[i+1]);
+                if (leg) { 
+                    detailedPath.push(...(i === 0 ? leg : leg.slice(1))); 
+                } else { 
+                    detailedPath = []; 
+                    break; 
+                }
+            }
+            if (detailedPath.length >= 2) {
+                animationStates[itinerary.id] = [{ path: detailedPath, currentStep: 0, stepProgress: 0, isActive: false, speed: 0.01 }];
+            }
+        });
+        startAnimationLoop();
+    };
+
+    const animationLoop = () => {
+        let hasActiveAnimations = false;
+        Object.keys(animationStates).forEach(canvasId => {
+            const car = animationStates[canvasId]?.[0];
+            if (!car || !car.isActive) return;
+            hasActiveAnimations = true;
+            car.stepProgress += car.speed;
+            if (car.stepProgress >= 1) { car.stepProgress = 0; car.currentStep++; if (car.currentStep >= car.path.length - 1) car.currentStep = 0; }
+            redrawCanvas(canvasId);
+        });
+
+        if (hasActiveAnimations) {
+            animationFrameId = requestAnimationFrame(animationLoop);
+        } else {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    };
+    
+    const startAnimationLoop = () => {
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(animationLoop);
+        }
+    };
+
+    const setupIntersectionObserver = () => {
+        if (observer) observer.disconnect();
+        
+        const options = { rootMargin: '0px', threshold: 0.1 };
+        observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                const canvasId = entry.target.id;
+                const car = animationStates[canvasId]?.[0];
+                if (car) {
+                    const wasActive = car.isActive;
+                    car.isActive = entry.isIntersecting;
+                    if (!wasActive && car.isActive) {
+                        startAnimationLoop();
+                    }
+                }
+            });
+        }, options);
+        
+        document.querySelectorAll('#map-grid-container canvas').forEach(canvas => {
+            observer.observe(canvas);
+        });
+    };
+
+    // --- MODALS & UI FEEDBACK ---
+    const showToast = (msg, duration = 2000, isError = false) => {
+        const toast = dom.toast; clearTimeout(toastTimeout);
+        toast.textContent = msg;
+        toast.className = `fixed z-[2002] bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ease-out opacity-0 transform -translate-y-10 pointer-events-none ${isError ? 'bg-red-600' : 'bg-gray-800'}`;
+        requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-10'); });
+        toastTimeout = setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-10'); }, duration);
+    };
+    
+    const showLoading = (show) => { dom.loadingOverlay.classList.toggle('hidden', !show); dom.loadingOverlay.classList.toggle('flex', show); }
+    
+    const showModal = ({ title, confirmText, fields, onSave, isDelete = false }) => {
+        const modal = dom.modal;
+        modal.title.textContent = title;
+
+        let fieldsHtml = '';
+        if (fields) {
+            fieldsHtml = fields.map(field => {
+                const value = escapeHTML(field.value) || '';
+                const placeholder = field.placeholder || '';
+                if (field.type === 'textarea') {
+                    return `<div><label class="form-label" for="modal-${field.id}">${field.label}</label><textarea id="modal-${field.id}" class="form-textarea" rows="3" placeholder="${placeholder}">${value}</textarea></div>`;
+                }
+                return `<div><label class="form-label" for="modal-${field.id}">${field.label}</label><input type="${field.type || 'text'}" id="modal-${field.id}" class="form-input" value="${value}" placeholder="${placeholder}"></div>`;
+            }).join('');
+        }
+        modal.fieldsContainer.innerHTML = fieldsHtml;
+
+        if (confirmText) {
+            modal.confirm.classList.remove('hidden');
+            modal.confirmText.textContent = confirmText;
+        } else {
+            modal.confirm.classList.add('hidden');
+        }
+        
+        modal.save.className = 'control-btn !text-white px-4 py-2 text-sm';
+        modal.save.classList.toggle('!bg-red-600', isDelete);
+        modal.save.classList.toggle('!border-red-600', isDelete);
+        modal.save.classList.toggle('!bg-blue-600', !isDelete);
+        
+        modal.overlay.classList.add('show');
+
+        const closeModal = () => { 
+            modal.overlay.classList.remove('show'); 
+            modal.save.onclick = null; 
+            modal.cancel.onclick = null; 
+        };
+
+        modal.save.onclick = () => {
+            try {
+                if (onSave) {
+                    const result = {};
+                    if(fields) {
+                        fields.forEach(field => {
+                            const input = document.getElementById(`modal-${field.id}`);
+                            if(input) result[field.id] = input.value;
+                        });
+                    }
+                    onSave(result);
+                }
+            } catch (error) {
+                console.error("Error during modal onSave:", error);
+                showToast("保存时出错", 3000, true);
+            } finally {
+                closeModal();
+            }
+        };
+        modal.cancel.onclick = closeModal;
+    };
+
+    const setMode = (newMode) => {
+        if (mode.startsWith('drawLine') && !newMode.startsWith('drawLine')) {
+            selectedStartCity = null;
+        }
+        if (mode === 'route_building' && newMode !== 'route_building') {
+            const itinerary = mapItineraries.find(i => i.id === routeBuilder.canvasId);
+            if(itinerary) {
+                routeBuilder = { isActive: false, canvasId: null, points: [] };
+                redrawCanvas(itinerary.id);
+            }
+        }
+
+        mode = (mode === newMode && newMode !== 'route_building') ? 'none' : newMode;
+
+        if (mode !== 'edit' && mode !== 'moveText') selectedItem = null;
+        if (mode !== 'moveText') itemToMoveText = null;
+
+        dom.lightbox.mapContainer.classList.toggle('move-text-mode', mode === 'moveText');
+        updateControlVisibility();
+    };
+
+    const updateControlVisibility = () => {
+        if (!dom.lightbox.container.classList.contains('show')) return;
+        Object.values(dom.lightbox.buttons).forEach(btn => { if(btn) btn.classList.remove('active'); });
+        
+        const indicatorMap = { 
+            edit: { text: '编辑/移动', icon: 'fa-arrows-up-down-left-right' }, 
+            addCity: { text: '添加城市', icon: 'fa-map-marker-alt' }, 
+            drawLine_start: { text: '连接:起点', icon: 'fa-road' }, 
+            drawLine_end: { text: `连接:终点`, icon: 'fa-road' },
+            route_building: { text: `规划路线`, icon: 'fa-route' },
+            moveText: { text: '移动文本', icon: 'fa-font' },
+        };
+
+        const indicator = indicatorMap[mode];
+        if (indicator) {
+            dom.lightbox.modeIndicator.innerHTML = `<i class="fas ${indicator.icon}"></i><span class="truncate">${indicator.text}</span>`;
+            dom.lightbox.modeIndicator.classList.remove('hidden', 'opacity-0');
+            const activeBtnId = { edit: 'lb-editModeBtn', addCity: 'lb-addCityBtn', drawLine_start: 'lb-drawLineBtn', drawLine_end: 'lb-drawLineBtn', moveText: 'lb-moveTextBtn' }[mode];
+            if (activeBtnId && dom.lightbox.buttons[activeBtnId]) dom.lightbox.buttons[activeBtnId].classList.add('active');
+        } else {
+            dom.lightbox.modeIndicator.classList.add('opacity-0'); 
+            setTimeout(() => dom.lightbox.modeIndicator.classList.add('hidden'), 300);
+        }
+        if (dom.lightbox.buttons['lb-setRouteBtn']) dom.lightbox.buttons['lb-setRouteBtn'].classList.toggle('active', mode === 'route_building');
+        
+        if(dom.lightbox.buttons['lb-deleteBtn']) dom.lightbox.buttons['lb-deleteBtn'].disabled = mode !== 'edit' || !selectedItem || selectedItem.type === 'controlPoint';
+        if(dom.lightbox.buttons['lb-undoBtn']) dom.lightbox.buttons['lb-undoBtn'].disabled = !history[currentLightboxCanvasId] || history[currentLightboxCanvasId].length < 2;
+        if(dom.lightbox.buttons['lb-straightenLineBtn']) dom.lightbox.buttons['lb-straightenLineBtn'].classList.toggle('hidden', !(mode === 'edit' && selectedItem?.type === 'line'));
+    };
+    
+    // --- DATA & STATE MANAGEMENT ---
+    const saveDataToLocal = () => localStorage.setItem("xinjiang_map_v23.3", JSON.stringify(mapItineraries));
+    const loadDataFromLocal = () => {
+        let savedData = null;
+        try {
+            const rawData = localStorage.getItem("xinjiang_map_v23.3") || localStorage.getItem("xinjiang_map_v23.2") || localStorage.getItem("xinjiang_map_v23.1") || localStorage.getItem("xinjiang_map_v23.0") || localStorage.getItem("xinjiang_map_v22.1") || localStorage.getItem("xinjiang_map_v21.0") || localStorage.getItem("xinjiang_map_v20.0");
+            if (rawData) {
+                 savedData = JSON.parse(rawData);
+            }
+        } catch (e) {
+            console.error("Failed to parse localStorage data, resetting.", e);
+            showToast("本地数据已损坏，将加载初始数据。", 4000, true);
+            savedData = null;
+        }
+
+        let itineraries = savedData || getInitialData();
+        
+        itineraries.forEach(itinerary => {
+            if (!itinerary.id) itinerary.id = `map-${Date.now()}-${Math.random()}`;
+            if (itinerary.isRecommended === undefined) itinerary.isRecommended = false;
+            if (!itinerary.data) itinerary.data = { cities: [], lines: [], routes: [] };
+            if (!itinerary.data.cities) itinerary.data.cities = [];
+            if (!itinerary.data.lines) itinerary.data.lines = [];
+            if (!itinerary.data.routes) itinerary.data.routes = [];
+            itinerary.data.cities.forEach(city => {
+                if(!city.id) city.id = Date.now() + Math.random();
+                city.link = city.link || '';
+                city.details = city.details || '';
+                city.textOffsetX = city.textOffsetX || 0;
+                city.textOffsetY = city.textOffsetY || 0;
+            });
+            itinerary.data.lines.forEach(line => {
+                if(!line.id) line.id = Date.now() + Math.random();
+                line.textOffsetX = line.textOffsetX || 0;
+                line.textOffsetY = line.textOffsetY || 0;
+            });
+        });
+
+        mapItineraries = itineraries;
+        history = {};
+        mapItineraries.forEach(itinerary => saveStateForUndo(itinerary.id, true));
+    };
+
+    const saveInfoContent = () => localStorage.setItem("xinjiang_info_content_v23.3", JSON.stringify(infoContentData));
+    const loadInfoContent = () => { 
+        try {
+            infoContentData = JSON.parse(localStorage.getItem("xinjiang_info_content_v23.3") || "{}");
+        } catch (e) {
+            console.error("Failed to parse info content, resetting.", e);
+            infoContentData = {};
+        }
+    };
+    
+    const saveStateForUndo = (canvasId, isInitial = false) => {
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (itinerary) {
+            if (!history[canvasId]) history[canvasId] = [];
+            if (isInitial) history[canvasId] = [];
+            const lastState = history[canvasId][history[canvasId].length - 1];
+            const currentState = JSON.stringify(itinerary);
+            if (lastState === currentState) return; 
+            
+            history[canvasId].push(currentState);
+            if (history[canvasId].length > 30) history[canvasId].shift(); 
+            if (!isInitial) updateControlVisibility();
+        }
+    };
+    
+    const getCanvasPos = (e, canvasEl) => {
+        const rect = canvasEl.getBoundingClientRect();
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    
+    const findItemAtPos = (canvasId, x, y) => {
+        const isLightbox = dom.lightbox.container.classList.contains('show');
+        const canvas = isLightbox ? dom.lightbox.mapContainer.querySelector('canvas') : document.getElementById(canvasId);
+        if (!canvas) return null;
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (!itinerary) return null;
+
+        const {data} = itinerary, rect = canvas.getBoundingClientRect();
+        const baseWidth = 1140, baseHeight = 840;
+        const scaleX = rect.width / baseWidth, scaleY = rect.height / baseHeight;
+        const clickRadius = 15, controlPointRadius = 10;
+        
+        // FIX: Re-enabling precise text hit detection
+        if (isLightbox && mode === 'moveText') {
+            const FONT_FAMILY = '"Microsoft YaHei", sans-serif';
+            hitCtx.font = `700 10px ${FONT_FAMILY}`;
+            for (const city of data.cities.slice().reverse()) {
+                if (city.name) {
+                    const metrics = hitCtx.measureText(city.name);
+                    const textX = city.x * scaleX + (city.textOffsetX || 0);
+                    const textY = city.y * scaleY - 16 + (city.textOffsetY || 0);
+                    const textWidth = metrics.width;
+                    const textHeight = 10; 
+                    if (x >= textX - textWidth / 2 && x <= textX + textWidth / 2 && y >= textY - textHeight / 2 && y <= textY + textHeight / 2) {
+                        return { type: 'text', item: city };
+                    }
+                }
+            }
+            hitCtx.font = `600 7px ${FONT_FAMILY}`;
+            for (const line of data.lines.slice().reverse()) {
+                 if (line.text) {
+                    const from = data.cities.find(c => c.id === line.from), to = data.cities.find(c => c.id === line.to);
+                    if (from && to) {
+                        const start = { x: from.x * scaleX, y: from.y * scaleY };
+                        const end = { x: to.x * scaleX, y: to.y * scaleY };
+                        if (!line.cp1 || !line.cp2) { continue; }
+                        const cp1 = { x: line.cp1.x * scaleX, y: line.cp1.y * scaleY };
+                        const cp2 = { x: line.cp2.x * scaleX, y: line.cp2.y * scaleY };
+                        let midPos = getPointOnBezier(start, cp1, cp2, end, 0.5);
+                        midPos.x += line.textOffsetX || 0;
+                        midPos.y += line.textOffsetY || 0;
+                        const metrics = hitCtx.measureText(line.text);
+                        const textWidth = metrics.width;
+                        const textHeight = 7;
+                        if (x >= midPos.x - textWidth/2 && x <= midPos.x + textWidth/2 && y >= midPos.y - textHeight && y <= midPos.y) {
+                           return { type: 'text', item: line };
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (isLightbox && mode === 'edit' && selectedItem?.type === 'line') {
+            const line = selectedItem.item;
+            const from = data.cities.find(c => c.id === line.from), to = data.cities.find(c => c.id === line.to);
+            if (from && to && line.cp1 && line.cp2) {
+                const cp1Pos = { x: line.cp1.x * scaleX, y: line.cp1.y * scaleY }, cp2Pos = { x: line.cp2.x * scaleX, y: line.cp2.y * scaleY };
+                if (Math.hypot(x - cp1Pos.x, y - cp1Pos.y) < controlPointRadius) return { type: 'controlPoint', item: line, pointName: 'cp1' };
+                if (Math.hypot(x - cp2Pos.x, y - cp2Pos.y) < controlPointRadius) return { type: 'controlPoint', item: line, pointName: 'cp2' };
+            }
+        }
+        
+        for (const city of data.cities.slice().reverse()) { if (Math.hypot(x - city.x * scaleX, y - city.y * scaleY) < clickRadius) return { type: 'city', item: city }; }
+        for (const line of data.lines.slice().reverse()) {
+            const from = data.cities.find(c => c.id === line.from), to = data.cities.find(c => c.id === line.to);
+            if (from && to && line.cp1 && line.cp2) {
+                const p0 = { x: from.x * scaleX, y: from.y * scaleY }, p3 = { x: to.x * scaleX, y: to.y * scaleY };
+                const p1 = { x: line.cp1.x * scaleX, y: line.cp1.y * scaleY }, p2 = { x: line.cp2.x * scaleX, y: line.cp2.y * scaleY };
+                for (let t = 0; t <= 1; t += 0.05) {
+                    const bx = getPointOnBezier(p0, p1, p2, p3, t).x, by = getPointOnBezier(p0, p1, p2, p3, t).y;
+                    if (Math.hypot(x - bx, y - by) < clickRadius) return { type: 'line', item: line };
+                }
+            }
+        }
+        return null;
+    };
+    
+    // --- UI & MODAL HANDLERS ---
+    const showLightbox = (canvasId) => {
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (!itinerary) return;
+        currentLightboxCanvasId = canvasId;
+        dom.lightbox.mapContainer.innerHTML = `<canvas data-id="${canvasId}"></canvas>`;
+        dom.lightbox.editor.innerText = itinerary.description || '';
+        // MODIFIED: Use .value for input field
+        dom.lightbox.editorTitle.value = itinerary.title;
+        dom.lightbox.saveBtn.dataset.id = canvasId;
+
+        createLightboxControls(); 
+        addLightboxEventListeners(canvasId);
+        dom.lightbox.container.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => { redrawCanvas(canvasId); setMode('edit'); }, 50);
+    };
+
+    const hideLightbox = () => {
+        removeLightboxEventListeners();
+        dom.lightbox.container.classList.remove('show'); 
+        document.body.style.overflow = ''; 
+
+        if (currentLightboxCanvasId) { 
+            const itinerary = mapItineraries.find(i => i.id === currentLightboxCanvasId);
+            if (itinerary) {
+                const cardTitle = document.querySelector(`.card-title[data-id="${itinerary.id}"]`);
+                if (cardTitle) cardTitle.value = itinerary.title;
+                
+                const highlights = document.querySelector(`.highlights-preview[data-id="${itinerary.id}"] .prose`);
+                if (highlights) highlights.innerHTML = itinerary.description ? escapeHTML(itinerary.description).replace(/\n/g, '<br>') : '暂无行程亮点，快去添加吧！';
+            }
+            redrawCanvas(currentLightboxCanvasId);
+        }
+
+        currentLightboxCanvasId = null; setMode('none'); selectedItem = null;
+        routeBuilder = { isActive: false, canvasId: null, points: [] };
+        dom.lightbox.controlsContainer.innerHTML = '';
+        dom.lightbox.mapContainer.innerHTML = '';
+    };
+
+    const showCreatorModal = () => {
+        dom.creatorModal.titleInput.value = '';
+        dom.creatorModal.container.classList.add('show');
+    };
+    const hideCreatorModal = () => dom.creatorModal.container.classList.remove('show');
+    
+    const addLightboxEventListeners = (canvasId) => {
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (!itinerary) return;
+        const canvasContainer = dom.lightbox.mapContainer;
+        if (!canvasContainer) return;
+        
+        // --- ADDED: Lightbox title editing feature ---
+        const lightboxTitleInput = dom.lightbox.editorTitle;
+        const saveLightboxTitle = () => {
+            const newTitle = lightboxTitleInput.value.trim();
+            if (newTitle && itinerary.title !== newTitle) {
+                itinerary.title = newTitle;
+                const mainCardTitle = document.querySelector(`.card-title[data-id="${canvasId}"]`);
+                if (mainCardTitle) {
+                    mainCardTitle.value = newTitle;
+                }
+                saveDataToLocal();
+                showToast("标题已更新", 1500);
+            }
+        };
+        lightboxTitleInput.addEventListener('blur', saveLightboxTitle);
+        lightboxTitleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lightboxTitleInput.blur();
+            }
+        });
+        // --- END ADDED ---
+
+        dom.lightbox.buttons['lb-saveBtn'].onclick = () => { saveDataToLocal(); saveInfoContent(); showToast("所有更改已保存！"); };
+        dom.lightbox.buttons['lb-setRouteBtn'].onclick = () => {
+            if (mode !== 'route_building') { setMode('route_building'); routeBuilder.isActive = true; routeBuilder.canvasId = canvasId; routeBuilder.points = [...(itinerary.data.routes[0] || [])]; redrawCanvas(canvasId); } 
+            else {
+                if (routeBuilder.points.length > 0 && routeBuilder.points.length < 2) { showToast('路线至少需要2个点', 2000, true); return; }
+                itinerary.data.routes = routeBuilder.points.length < 2 ? [] : [routeBuilder.points];
+                showToast(itinerary.data.routes.length > 0 ? '新路线已设置！' : '路线已清除');
+                saveStateForUndo(canvasId); initializeAnimationStates(); setMode('edit');
+            }
+        };
+        dom.lightbox.buttons['lb-editModeBtn'].onclick = () => setMode("edit");
+        dom.lightbox.buttons['lb-addCityBtn'].onclick = () => setMode("addCity");
+        dom.lightbox.buttons['lb-drawLineBtn'].onclick = () => setMode("drawLine_start");
+        dom.lightbox.buttons['lb-moveTextBtn'].onclick = () => setMode("moveText");
+        
+        dom.lightbox.buttons['lb-deleteBtn'].onclick = () => {
+             if (!selectedItem || selectedItem.type === 'controlPoint') return;
+             showModal({ 
+                title: "确认删除", 
+                confirmText: `您确定要删除这个${selectedItem.type === 'city' ? '城市' : '线路'}吗？`, 
+                isDelete: true,
+                onSave: () => {
+                    saveStateForUndo(canvasId);
+                    if (selectedItem.type === 'city') {
+                        itinerary.data.cities = itinerary.data.cities.filter(c => c.id !== selectedItem.item.id);
+                        itinerary.data.lines = itinerary.data.lines.filter(l => l.from !== selectedItem.item.id && l.to !== selectedItem.item.id);
+                    } else if (selectedItem.type === 'line') { 
+                        itinerary.data.lines = itinerary.data.lines.filter(l => l.id !== selectedItem.item.id); 
+                    }
+                    selectedItem = null; redrawCanvas(canvasId); updateControlVisibility(); initializeAnimationStates(); 
+                }
+            });
+        };
+        dom.lightbox.buttons['lb-undoBtn'].onclick = () => {
+            if (!history[canvasId] || history[canvasId].length < 2) return showToast("没有可撤销的操作", 2000, true);
+            history[canvasId].pop();
+            const prevStateJSON = history[canvasId][history[canvasId].length - 1];
+            const index = mapItineraries.findIndex(i => i.id === canvasId);
+            if (index !== -1) { 
+                mapItineraries[index] = JSON.parse(prevStateJSON);
+                redrawCanvas(canvasId); initializeAnimationStates(); showToast("已撤销"); 
+            }
+            updateControlVisibility();
+        };
+        dom.lightbox.buttons['lb-straightenLineBtn'].onclick = () => {
+            if (mode !== 'edit' || !selectedItem || selectedItem.type !== 'line') return;
+            saveStateForUndo(canvasId);
+            const line = selectedItem.item, fromCity = itinerary.data.cities.find(c => c.id === line.from), toCity = itinerary.data.cities.find(c => c.id === line.to);
+            if (fromCity && toCity) {
+                const dx = toCity.x - fromCity.x, dy = toCity.y - fromCity.y;
+                line.cp1 = { x: fromCity.x + dx / 3, y: fromCity.y + dy / 3 }; line.cp2 = { x: fromCity.x + dx * 2 / 3, y: fromCity.y + dy * 2 / 3 };
+                redrawCanvas(canvasId); showToast("线路已拉直");
+            }
+        };
+        dom.lightbox.lineColorInput.onchange = (e) => {
+            if (mode === 'edit' && selectedItem?.type === 'line') {
+                 saveStateForUndo(canvasId); selectedItem.item.color = e.target.value; redrawCanvas(canvasId);
+            }
+        };
+
+        const handleCanvasClick = (e) => {
+            if (isDragging || !e.target.matches('canvas')) return;
+            const pos = getCanvasPos(e, e.target);
+            const found = findItemAtPos(canvasId, pos.x, pos.y);
+            
+            if (mode === 'route_building') {
+                if (found?.type === 'city') {
+                    const cityId = found.item.id;
+                    const isLastPoint = routeBuilder.points.length > 0 && routeBuilder.points[routeBuilder.points.length - 1] === cityId;
+
+                    if (isLastPoint) {
+                        showToast("不能连续选择同一个城市", 2000, true);
+                        return;
+                    }
+                    
+                    const pointIndex = routeBuilder.points.indexOf(cityId);
+
+                    if (pointIndex > -1) { 
+                        if (pointIndex === 0 && routeBuilder.points.length >= 2) {
+                            routeBuilder.points.push(cityId); 
+                        } else {
+                            routeBuilder.points.splice(pointIndex, 1);
+                        }
+                    } else { 
+                        routeBuilder.points.push(cityId);
+                    }
+
+                    redrawCanvas(canvasId);
+                    updateControlVisibility(); 
+                } return;
+            }
+
+            if (mode.startsWith('drawLine')) {
+                if (!found || found.type !== 'city') return;
+                if (mode === 'drawLine_start') { selectedStartCity = found.item; setMode('drawLine_end'); } 
+                else if (found.item.id !== selectedStartCity.id) {
+                    const toCity = found.item;
+                    showModal({ 
+                        title: "编辑线路信息",
+                        fields: [ {id: 'text', label: '距离/标题', value: '新线路'}, {id: 'details', label: '备注', type: 'textarea'}, ],
+                        onSave: (data) => {
+                            saveStateForUndo(canvasId);
+                            itinerary.data.lines.push({ id: Date.now(), from: selectedStartCity.id, to: toCity.id, color: dom.lightbox.lineColorInput.value, ...data });
+                            redrawCanvas(canvasId); setMode('edit'); initializeAnimationStates();
+                        }
+                    });
+                } else {
+                    showToast("不能将城市连接到自身", 2000, true);
+                }
+            } else if (mode === 'addCity') {
+                const clickPos = pos;
+                showModal({ 
+                    title: "添加城市", 
+                    fields: [ {id: 'name', label: '城市名称', value: '新城市'}, {id: 'link', label: '网址 (可选)', type: 'url'}, {id: 'details', label: '备注', type: 'textarea'}, ],
+                    onSave: (data) => {
+                        saveStateForUndo(canvasId);
+                        const rect = e.target.getBoundingClientRect(), baseWidth = 1140, baseHeight = 840;
+                        const scaleX = rect.width / baseWidth, scaleY = rect.height / baseHeight;
+                        itinerary.data.cities.push({ id: Date.now(), ...data, x: clickPos.x / scaleX, y: clickPos.y / scaleY, textOffsetX: 0, textOffsetY: 0 });
+                        redrawCanvas(canvasId); setMode('edit');
+                    }
+                });
+            }
+        };
+
+        const handleMouseDown = (e) => {
+            if (e.button !== 0 || !e.target.matches('canvas')) return;
+            e.preventDefault();
+            const pos = getCanvasPos(e, e.target);
+            
+            const foundItem = findItemAtPos(canvasId, pos.x, pos.y);
+            
+            if (mode === 'edit') {
+                if (foundItem) {
+                    saveStateForUndo(canvasId); 
+                    selectedItem = foundItem;
+                    isDragging = true;
+                    dragStartPos = pos;
+                    if(selectedItem.type === 'city') { originalDragItemPos = { x: selectedItem.item.x, y: selectedItem.item.y }; } 
+                    else if (selectedItem.type === 'controlPoint') { originalDragItemPos = { x: selectedItem.item[selectedItem.pointName].x, y: selectedItem.item[selectedItem.pointName].y }; }
+                } else {
+                    selectedItem = null;
+                }
+            } else if (mode === 'moveText') {
+                if(foundItem && foundItem.type === 'text') {
+                    itemToMoveText = foundItem;
+                    saveStateForUndo(canvasId);
+                    isDragging = true;
+                    dragStartPos = pos;
+                    originalDragItemPos = { x: itemToMoveText.item.textOffsetX || 0, y: itemToMoveText.item.textOffsetY || 0};
+                } else {
+                    itemToMoveText = null;
+                }
+            }
+            redrawCanvas(canvasId);
+            updateControlVisibility();
+        };
+
+        const handleMouseMove = (e) => {
+            e.preventDefault();
+            if (!isDragging || !e.target.matches('canvas')) {
+                const pos = getCanvasPos(e, e.target);
+                const found = findItemAtPos(canvasId, pos.x, pos.y);
+                dom.tooltip.classList.toggle('show', !!found);
+                if (found) {
+                    const title = found.item.name || found.item.text || (found.type === 'controlPoint' ? '控制点' : '未知');
+                    dom.tooltip.innerHTML = `<div class="font-bold">${escapeHTML(title)}</div>${found.item.details ? `<div class="mt-1 font-light text-gray-300">${escapeHTML(found.item.details)}</div>` : ''}`;
+                    const pageX = e.pageX || (e.touches && e.touches[0].pageX);
+                    const pageY = e.pageY || (e.touches && e.touches[0].pageY);
+                    if(pageX && pageY) {
+                       dom.tooltip.style.left = `${pageX}px`; dom.tooltip.style.top = `${pageY}px`;
+                    }
+                }
+                return;
+            }
+            const pos = getCanvasPos(e, e.target);
+            
+            const rect = e.target.getBoundingClientRect();
+            const baseWidth = 1140, baseHeight = 840;
+            const scaleX = rect.width / baseWidth, scaleY = rect.height / baseHeight;
+            
+            const dx_canvas = pos.x - dragStartPos.x;
+            const dy_canvas = pos.y - dragStartPos.y;
+
+            if (mode === 'edit' && selectedItem) {
+                const dx_model = dx_canvas / scaleX;
+                const dy_model = dy_canvas / scaleY;
+
+                if (selectedItem.type === 'city') {
+                    const newX = originalDragItemPos.x + dx_model;
+                    const newY = originalDragItemPos.y + dy_model;
+                    const oldX = selectedItem.item.x;
+                    const oldY = selectedItem.item.y;
+                    
+                    selectedItem.item.x = newX;
+                    selectedItem.item.y = newY;
+
+                    const deltaX = newX - oldX;
+                    const deltaY = newY - oldY;
+                    itinerary.data.lines.forEach(line => {
+                        if (line.from === selectedItem.item.id && line.cp1) { line.cp1.x += deltaX; line.cp1.y += deltaY; }
+                        if (line.to === selectedItem.item.id && line.cp2) { line.cp2.x += deltaX; line.cp2.y += deltaY; }
+                    });
+
+                } else if (selectedItem.type === 'controlPoint') {
+                    selectedItem.item[selectedItem.pointName].x = originalDragItemPos.x + dx_model;
+                    selectedItem.item[selectedItem.pointName].y = originalDragItemPos.y + dy_model;
+                }
+            } else if (mode === 'moveText' && itemToMoveText) {
+                itemToMoveText.item.textOffsetX = originalDragItemPos.x + dx_canvas;
+                itemToMoveText.item.textOffsetY = originalDragItemPos.y + dy_canvas;
+            }
+            
+            redrawCanvas(canvasId);
+        };
+        const handleMouseUp = () => { if(isDragging) { isDragging = false; itemToMoveText = null; initializeAnimationStates(); } };
+        const handleMouseLeave = () => { if(isDragging) { isDragging = false; itemToMoveText = null; initializeAnimationStates(); } dom.tooltip.classList.remove('show'); };
+        
+        const handleDblClick = (e) => {
+            if (mode !== 'edit' || !e.target.matches('canvas')) return;
+            const pos = getCanvasPos(e, e.target); 
+            const found = findItemAtPos(canvasId, pos.x, pos.y);
+            if (found && (found.type === 'city' || found.type === 'line')) {
+                 if (found.type === 'city') {
+                    showModal({
+                        title: "编辑城市信息",
+                        fields: [ {id: 'name', label: '城市名称', value: found.item.name}, {id: 'link', label: '网址', type: 'url', value: found.item.link}, {id: 'details', label: '备注', type: 'textarea', value: found.item.details}, ],
+                        onSave: (data) => {
+                            saveStateForUndo(canvasId); Object.assign(found.item, data); redrawCanvas(canvasId);
+                        }
+                    });
+                } else {
+                    showModal({
+                        title: "编辑线路信息",
+                        fields: [ {id: 'text', label: '距离/标题', value: found.item.text}, {id: 'details', label: '备注', type: 'textarea', value: found.item.details}, ],
+                        onSave: (data) => {
+                            saveStateForUndo(canvasId); Object.assign(found.item, data); redrawCanvas(canvasId);
+                        }
+                    });
+                }
+            }
+        };
+        
+        lightboxEventHandlers = {
+            click: handleCanvasClick, mousedown: handleMouseDown, mousemove: handleMouseMove, mouseup: handleMouseUp, mouseleave: handleMouseLeave, dblclick: handleDblClick,
+            touchstart: handleMouseDown, touchmove: handleMouseMove, touchend: handleMouseUp
+        };
+        Object.entries(lightboxEventHandlers).forEach(([event, handler]) => canvasContainer.addEventListener(event, handler));
+    };
+
+    const removeLightboxEventListeners = () => {
+        const canvasContainer = dom.lightbox.mapContainer;
+        if (canvasContainer && lightboxEventHandlers.click) {
+            Object.entries(lightboxEventHandlers).forEach(([event, handler]) => canvasContainer.removeEventListener(event, handler));
+        }
+        lightboxEventHandlers = {};
+        if(dom.lightbox.buttons){ Object.values(dom.lightbox.buttons).forEach(btn => { if(btn) btn.onclick = null; }); }
+        if (dom.lightbox.lineColorInput) { dom.lightbox.lineColorInput.onchange = null; }
+    };
+
+    const handleSaveDescription = () => {
+        const canvasId = dom.lightbox.saveBtn.dataset.id;
+        const itinerary = mapItineraries.find(i => i.id === canvasId);
+        if (itinerary) {
+            const newDescription = dom.lightbox.editor.innerText;
+            if (itinerary.description !== newDescription) {
+                saveStateForUndo(canvasId);
+                itinerary.description = newDescription;
+                showToast("行程亮点已保存！");
+            }
+        }
+    };
+    
+    const showInfoModal = (key) => { currentEditingInfoKey = key; dom.infoModal.title.textContent = key; dom.infoModal.editor.innerHTML = infoContentData[key] || `<p>请在此处输入关于“${key}”的详细信息...</p>`; dom.infoModal.container.classList.add('show'); document.body.style.overflow = 'hidden'; };
+    const hideInfoModal = () => { dom.infoModal.container.classList.remove('show'); document.body.style.overflow = ''; currentEditingInfoKey = null; };
+    const handleSaveInfo = () => { if (currentEditingInfoKey) { infoContentData[currentEditingInfoKey] = dom.infoModal.editor.innerHTML; saveInfoContent(); showToast("内容已保存！"); hideInfoModal(); } };
+    const toggleHighlights = (id) => { document.querySelector(`.highlights-preview[data-id="${id}"]`)?.classList.toggle('expanded'); };
+
+    const hideCityLinkTag = () => {
+        if (dom.cityLinkTag.classList.contains('show')) {
+            dom.cityLinkTag.classList.remove('show');
+            dom.cityLinkTag.removeEventListener('click', cityLinkClickHandler);
+            document.removeEventListener('click', docClickHandler);
+            cityLinkClickHandler = null;
+            docClickHandler = null;
+        }
+    };
+
+    const showCityLinkTag = (city, canvas, pos) => {
+        hideCityLinkTag(); 
+        if (!city || !city.link) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const tag = dom.cityLinkTag;
+        tag.textContent = '查看详情';
+        tag.style.left = `${pos.x + rect.left + window.scrollX}px`;
+        tag.style.top = `${pos.y + rect.top + window.scrollY}px`;
+        tag.classList.add('show');
+        
+        cityLinkClickHandler = (e) => {
+            e.stopPropagation();
+            window.open(city.link, '_blank');
+            hideCityLinkTag();
+        };
+        tag.addEventListener('click', cityLinkClickHandler);
+
+        docClickHandler = (e) => {
+            if (e.target !== tag) {
+                hideCityLinkTag();
+            }
+        };
+        setTimeout(() => document.addEventListener('click', docClickHandler), 0);
+    };
+
+
+    // --- APP LEVEL EVENT HANDLERS & INIT ---
+    const addCardEventListeners = () => {
+        dom.mapGridContainer.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('dragstart', (e) => {
+                const card = header.closest('.map-card');
+                draggedItineraryId = card.dataset.id;
+                setTimeout(() => card.classList.add('dragging'), 0);
+            });
+            header.addEventListener('dragend', (e) => {
+                 const card = header.closest('.map-card');
+                 if(card) card.classList.remove('dragging');
+                 draggedItineraryId = null;
+                 document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+            });
+        });
+        
+        dom.mapGridContainer.querySelectorAll('.map-card').forEach(card => {
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (card.dataset.id !== draggedItineraryId) card.classList.add('drag-over');
+            });
+             card.addEventListener('dragleave', (e) => card.classList.remove('drag-over'));
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                card.classList.remove('drag-over');
+                if (!draggedItineraryId) return;
+                const droppedOnItineraryId = card.dataset.id;
+                if (draggedItineraryId === droppedOnItineraryId) return;
+                const draggedIndex = mapItineraries.findIndex(i => i.id === draggedItineraryId);
+                const droppedOnIndex = mapItineraries.findIndex(i => i.id === droppedOnItineraryId);
+                const [draggedItem] = mapItineraries.splice(draggedIndex, 1);
+                mapItineraries.splice(droppedOnIndex, 0, draggedItem);
+                renderApp();
+            });
+        });
+
+        dom.mapGridContainer.querySelectorAll('.card-title').forEach(input => {
+             input.addEventListener('mousedown', e => e.stopPropagation());
+             
+             // --- MODIFIED: Added Enter key listener for saving title ---
+             input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); 
+                    e.target.blur();    
+                }
+             });
+
+             input.addEventListener('blur', (e) => {
+                const itinerary = mapItineraries.find(i => i.id === e.target.dataset.id);
+                if (itinerary && itinerary.title !== e.target.value) {
+                    itinerary.title = e.target.value;
+                    if(currentLightboxCanvasId === itinerary.id) {
+                        dom.lightbox.editorTitle.value = itinerary.title;
+                    }
+                    saveDataToLocal();
+                    showToast("标题已保存", 1500);
+                }
+             });
+        });
+
+        dom.mapGridContainer.querySelectorAll('.card-action-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                hideCityLinkTag();
+                if(isAppBusy) return;
+                const id = e.currentTarget.dataset.id;
+                if(e.currentTarget.classList.contains('delete-itinerary-btn')) {
+                    const itinerary = mapItineraries.find(i => i.id === id);
+                    if (!itinerary) return;
+                    showModal({
+                        title: "确认删除行程", confirmText: `您确定要删除 “${escapeHTML(itinerary.title)}” 这个行程吗？`, isDelete: true,
+                        onSave: () => {
+                            isAppBusy = true; showLoading(true);
+                            setTimeout(() => {
+                                mapItineraries = mapItineraries.filter(i => i.id !== id);
+                                renderApp();
+                                showToast("行程已成功删除");
+                                isAppBusy = false; showLoading(false);
+                            }, 100);
+                        }
+                    });
+                }
+                else if (e.currentTarget.classList.contains('highlights-toggle')) toggleHighlights(id);
+                else if (e.currentTarget.classList.contains('zoom-btn')) showLightbox(id);
+                else if (e.currentTarget.classList.contains('recommend-btn')) {
+                    const itinerary = mapItineraries.find(i => i.id === id);
+                    if(itinerary) {
+                        itinerary.isRecommended = !itinerary.isRecommended;
+                        showToast(itinerary.isRecommended ? "已推荐" : "已取消推荐");
+                        renderApp();
+                    }
+                }
+            });
+        });
+
+        dom.mapGridContainer.querySelectorAll('canvas').forEach(canvas => {
+             canvas.addEventListener('contextmenu', e => e.preventDefault());
+             canvas.addEventListener('mousemove', (e) => {
+                const pos = getCanvasPos(e, canvas);
+                const found = findItemAtPos(canvas.dataset.id, pos.x, pos.y);
+                dom.tooltip.classList.toggle('show', !!found && !dom.cityLinkTag.classList.contains('show'));
+                if (found) {
+                    const title = found.item.name || found.item.text || '未知元素';
+                    dom.tooltip.innerHTML = `<div class="font-bold">${escapeHTML(title)}</div>${found.item.details ? `<div class="mt-1 font-light text-gray-300">${escapeHTML(found.item.details)}</div>` : ''}`;
+                    dom.tooltip.style.left = `${e.pageX}px`; dom.tooltip.style.top = `${e.pageY}px`;
+                }
+             });
+             canvas.addEventListener('mouseleave', () => dom.tooltip.classList.remove('show'));
+             canvas.addEventListener('click', (e) => {
+                 const pos = getCanvasPos(e, canvas);
+                 const found = findItemAtPos(canvas.dataset.id, pos.x, pos.y);
+                 if (found?.type === 'city' && found.item.link) {
+                     e.stopPropagation();
+                     showCityLinkTag(found.item, canvas, pos);
+                 } else {
+                     hideCityLinkTag();
+                 }
+             });
+        });
+    };
+
+const addMainEventListeners = () => {
+        dom.buttons.addItineraryBtn.onclick = showCreatorModal;
+        dom.buttons.importBtn.onclick = () => dom.fileImporter.click();
+        dom.buttons.exportBtn.onclick = () => {
+            if (mapItineraries.length === 0) return showToast("没有可导出的行程");
+            const dataStr = JSON.stringify({ itineraries: mapItineraries, info: infoContentData }, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a');
+            a.href = url; a.download = `新疆行程规划_${(new Date).toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("数据已导出！");
+        };
+        dom.buttons.saveToBrowserBtn.onclick = () => { saveDataToLocal(); saveInfoContent(); showToast("所有更改已保存！", 2500); };
+        
+        dom.fileImporter.onchange = e => {
+            const file = e.target.files[0]; if (!file) return;
+            if(isAppBusy) { showToast("正在处理其他操作", 2000, true); return; }
+            isAppBusy = true; showLoading(true);
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setTimeout(() => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (Array.isArray(data.itineraries) && typeof data.info === 'object') {
+                            mapItineraries = data.itineraries; infoContentData = data.info;
+                            history = {}; mapItineraries.forEach(itinerary => saveStateForUndo(itinerary.id, true));
+                            initApp(true); showToast("数据导入成功！");
+                        } else { throw new Error("Invalid file format."); }
+                    } catch (err) { console.error("Import Error:", err); showToast("导入失败，文件格式错误。", 3000, true); }
+                    finally { isAppBusy = false; showLoading(false); }
+                }, 500);
+            };
+            reader.readAsText(file); e.target.value = '';
+        };
+
+        dom.lightbox.closeBtn.onclick = hideLightbox;
+        dom.lightbox.saveBtn.onclick = handleSaveDescription;
+        
+        // --- MODIFICATION START ---
+        // I have moved "北疆景点简介" from infoButtonsData to infoButtonsData2
+
+        const infoButtonsData = [
+            { key: "景区门票", color: "#ef4444", icon: "fa-ticket-alt" }, { key: "新疆交通", color: "#3b82f6", icon: "fa-plane" },
+            { key: "注意事项", color: "#f97316", icon: "fa-exclamation-triangle" }, { key: "必备物品", color: "#10b981", icon: "fa-suitcase-rolling" },
+            { key: "住宿推荐", color: "#8b5cf6", icon: "fa-bed" }, { key: "美食推荐", color: "#ec4899", icon: "fa-utensils" }
+            // The "北疆景点简介" item has been removed from this array.
+        ];
+        const infoButtonsData2 = [
+            // And added to the beginning of this array to group it with other region-specific topics.
+            { key: "北疆景点简介", color: "#14b8a6", icon: "fa-mountain" }, 
+            { key: "南疆景点简介", color: "#6366f1", icon: "fa-route" },
+            { key: "北疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }, { key: "南疆旅游避雷", color: "#6b7280", icon: "fa-shield-alt" }
+        ];
+        // --- MODIFICATION END ---
+
+         const monthButtonsData = [
+             { key: "3-4月底", color: "#22c55e", icon: "fa-leaf" }, { key: "5-8月", color: "#14b8a6", icon: "fa-sun" },
+             { key: "9-10月", color: "#d97706", icon: "fa-wind" }, { key: "11月-3月", color: "#0ea5e9", icon: "fa-snowflake" },
+        ];
+        
+        const createInfoButtons = (data, container) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex flex-wrap items-center justify-center gap-3 md:gap-4";
+            wrapper.innerHTML = data.map(d => `<button data-info-key="${escapeHTML(d.key)}" class="info-btn" style="background-color: ${d.color};"><i class="fas ${d.icon} mr-2"></i>${escapeHTML(d.key)}</button>`).join('');
+            container.appendChild(wrapper);
+        };
+
+        dom.infoButtonsContainer.innerHTML = ''; 
+        createInfoButtons(infoButtonsData, dom.infoButtonsContainer);
+        const secondRow = document.createElement('div');
+        secondRow.className = 'mt-3';
+        createInfoButtons(infoButtonsData2, secondRow);
+        dom.infoButtonsContainer.appendChild(secondRow);
+        const thirdRow = document.createElement('div');
+        thirdRow.className = 'mt-3';
+        createInfoButtons(monthButtonsData, thirdRow);
+        dom.infoButtonsContainer.appendChild(thirdRow);
+        
+        dom.infoButtonsContainer.querySelectorAll('.info-btn').forEach(button => button.addEventListener('click', () => showInfoModal(button.dataset.infoKey)));
+        
+        dom.infoModal.closeBtn.onclick = hideInfoModal;
+        dom.infoModal.saveBtn.onclick = handleSaveInfo;
+        
+        dom.creatorModal.cancelBtn.onclick = hideCreatorModal;
+        dom.creatorModal.saveBtn.onclick = () => {
+            if(isAppBusy) return;
+            const title = dom.creatorModal.titleInput.value.trim(); if (!title) { showToast("请输入标题", 2000, true); return; }
+            isAppBusy = true; showLoading(true);
+            
+            setTimeout(() => {
+                try {
+                    const newId = `map-${Date.now()}`;
+                    mapItineraries.push({ id: newId, title: title, description: `为“${title}”添加行程亮点`, isRecommended: false, data: { cities: [], lines: [], routes: [] } });
+                    saveStateForUndo(newId, true); 
+                    renderApp();
+                    showToast("新行程已创建"); 
+                    hideCreatorModal();
+                } finally {
+                    isAppBusy = false; showLoading(false);
+                }
+            }, 100);
+        };
+    };
+    
+    const initApp = (isReload = false) => {
+        if (!isReload) { loadDataFromLocal(); loadInfoContent(); } 
+        renderApp();
+    };
+
+    const init = () => {
+        createMainControls();
+        addMainEventListeners();
+        initApp();
+        window.addEventListener('resize', () => { mapItineraries.forEach(i => redrawCanvas(i.id)); });
+        document.addEventListener('keydown', (e) => {
+            const activeEl = document.activeElement;
+            const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+            if (e.key === 'Escape') {
+                if(dom.loadingOverlay.classList.contains('flex')) return;
+                if (dom.cityLinkTag.classList.contains('show')) hideCityLinkTag();
+                else if (dom.lightbox.container.classList.contains('show')) hideLightbox();
+                else if (dom.infoModal.container.classList.contains('show')) hideInfoModal();
+                else if (dom.creatorModal.container.classList.contains('show')) hideCreatorModal();
+                else if (dom.modal.overlay.classList.contains('show')) dom.modal.cancel.click();
+            }
+            if (dom.lightbox.container.classList.contains('show') && !isTyping) {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); dom.lightbox.buttons['lb-undoBtn']?.click(); }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedItem && dom.lightbox.buttons['lb-deleteBtn'] && !dom.lightbox.buttons['lb-deleteBtn'].disabled) { e.preventDefault(); dom.lightbox.buttons['lb-deleteBtn'].click(); }
+            }
+        });
+    };
+    init();
+});
+    </script>
+</body>
+</html>
